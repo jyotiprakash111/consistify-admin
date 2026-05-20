@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --surface: 248 250 252;
+    --surface-elevated: 255 255 255;
+    --border: 226 232 240;
+    --text: 15 23 42;
+    --text-muted: 100 116 139;
+    --accent: 15 23 42;
+    --accent-fg: 255 255 255;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --surface: 15 23 42;
+    --surface-elevated: 30 41 59;
+    --border: 51 65 85;
+    --text: 248 250 252;
+    --text-muted: 148 163 184;
+    --accent: 241 245 249;
+    --accent-fg: 15 23 42;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply antialiased transition-colors duration-300;
+    background-color: rgb(var(--surface));
+    color: rgb(var(--text));
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300/80 transition-colors duration-200;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600/80;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}

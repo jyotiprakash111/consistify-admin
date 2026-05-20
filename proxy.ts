@@ -1,55 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+
+const protectedPrefixes = [
+  '/dashboard',
+  '/users',
+  '/fine-collection',
+  '/wallet',
+  '/ocr',
+  '/badges',
+  '/analytics',
+  '/settings',
+  '/logs',
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isLoginPath = pathname === '/login';
+  const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  const isLoginPath = pathname === "/login";
-  const isDashboardPath = pathname.startsWith("/dashboard");
-  const isUsersPath = pathname.startsWith("/users");
-  const isAnalyticsPath = pathname.startsWith("/analytics");
-  const isWalletPath = pathname.startsWith("/wallet");
-  const isBadgesPath = pathname.startsWith("/badges");
-  const isOcrPath = pathname.startsWith("/ocr");
-  const isSettingsPath = pathname.startsWith("/settings");
-  const isLogsPath = pathname.startsWith("/logs");
-
-  // Only guard login and admin routes for now.
-  if (
-    !isDashboardPath &&
-    !isLoginPath &&
-    !isUsersPath &&
-    !isAnalyticsPath &&
-    !isWalletPath &&
-    !isBadgesPath &&
-    !isOcrPath &&
-    !isSettingsPath &&
-    !isLogsPath
-  ) {
+  if (!isLoginPath && !isProtected) {
     return NextResponse.next();
   }
 
-  const session = request.cookies.get("consistify_admin_token")?.value;
+  const session = request.cookies.get('consistify_admin_token')?.value;
 
-  // If not authenticated and trying to access protected routes, redirect to login.
-  if (
-    !session &&
-    (isDashboardPath ||
-      isUsersPath ||
-      isAnalyticsPath ||
-      isWalletPath ||
-      isBadgesPath ||
-      isOcrPath ||
-      isSettingsPath ||
-      isLogsPath)
-  ) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
+  if (!session && isProtected) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If already authenticated and on login page, push to dashboard.
   if (session && isLoginPath) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return NextResponse.next();
@@ -57,15 +38,15 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/login",
-    "/dashboard/:path*",
-    "/users/:path*",
-    "/analytics/:path*",
-    "/wallet/:path*",
-    "/badges/:path*",
-    "/ocr/:path*",
-    "/settings/:path*",
-    "/logs/:path*",
+    '/login',
+    '/dashboard/:path*',
+    '/users/:path*',
+    '/fine-collection/:path*',
+    '/wallet/:path*',
+    '/badges/:path*',
+    '/ocr/:path*',
+    '/analytics/:path*',
+    '/settings/:path*',
+    '/logs/:path*',
   ],
 };
-

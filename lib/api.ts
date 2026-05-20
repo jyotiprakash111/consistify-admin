@@ -1,3 +1,13 @@
+import type { AnalyticsPayload, SubjectsAnalyticsPayload } from '@/lib/types/analytics';
+import type {
+  AdminLog,
+  AdminUser,
+  DashboardMetrics,
+  FeatureOverrides,
+  FineCollectionUser,
+  SystemConfig,
+} from '@/lib/types/admin';
+
 export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; status: number };
@@ -42,6 +52,7 @@ async function request<T>(
   }
 }
 
+// Auth
 export function adminLogin(email: string, password: string) {
   return request<{ success: boolean; token: string }>('/login', {
     method: 'POST',
@@ -53,27 +64,24 @@ export function adminLogout() {
   return request<{ success: boolean }>('/logout', { method: 'POST' });
 }
 
+// Dashboard
 export function getDashboard() {
-  return request<{
-    success: boolean;
-    metrics: Record<string, number>;
-  }>('/dashboard');
+  return request<{ success: boolean; metrics: DashboardMetrics }>('/dashboard');
 }
 
+// Users
 export function getUsers(query = '') {
-  return request<{ success: boolean; users: Array<Record<string, unknown>> }>(
-    `/users${query ? `?${query}` : ''}`,
-  );
+  return request<{ success: boolean; users: AdminUser[] }>(`/users${query ? `?${query}` : ''}`);
 }
 
 export function getUserDetail(userId: string) {
   return request<{
     success: boolean;
-    user: Record<string, unknown>;
+    user: AdminUser;
     sessions: Array<Record<string, unknown>>;
     transactions: Array<Record<string, unknown>>;
     ocrSubmissions: Array<Record<string, unknown>>;
-    adminNotes: Array<Record<string, unknown>>;
+    adminNotes: Array<{ id: string; text: string; createdAt: string }>;
   }>(`/users/${encodeURIComponent(userId)}`);
 }
 
@@ -86,63 +94,59 @@ export function patchUser(
     walletAdjustment?: { amount: number; reason: string };
   },
 ) {
-  return request<{ success: boolean; user: Record<string, unknown> }>(
-    `/users/${encodeURIComponent(userId)}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    },
+  return request<{ success: boolean; user: AdminUser }>(`/users/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAllFeatureOverrides() {
+  return request<{ success: boolean; overrides: Record<string, FeatureOverrides> }>(
+    '/users/feature-overrides',
   );
 }
 
-export function getAnalytics() {
+export function getUserFeatureOverrides(userId: string) {
+  return request<{ success: boolean; userId: string; userName: string } & FeatureOverrides>(
+    `/users/${encodeURIComponent(userId)}/feature-overrides`,
+  );
+}
+
+export function patchUserFeatureOverrides(userId: string, payload: Partial<FeatureOverrides>) {
+  return request<{ success: boolean } & FeatureOverrides>(
+    `/users/${encodeURIComponent(userId)}/feature-overrides`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+export function approveExtraLeave(userId: string, leaveId: string) {
+  return request<{ success: boolean }>(
+    `/users/${encodeURIComponent(userId)}/leaves/${encodeURIComponent(leaveId)}/approve-extra`,
+    { method: 'POST' },
+  );
+}
+
+// Fine collection
+export function getFineCollectionSummary() {
   return request<{
     success: boolean;
-    growthPoints: Array<Record<string, unknown>>;
-    dropoffStages: Array<Record<string, unknown>>;
-    retentionMetrics: Array<Record<string, unknown>>;
-    spacedRepetitionMetrics: Array<Record<string, unknown>>;
-  }>('/analytics');
+    totalWalletBalance: number;
+    totalFineCollected: number;
+    totalApplicableToday: number;
+    differenceAsOfToday: number;
+    descriptions: Record<string, string>;
+  }>('/fine-collection/summary');
 }
 
-export function getAnalyticsSubjects() {
+export function getFineCollectionUsers() {
   return request<{
     success: boolean;
-    totalSubjects: number;
-    schedulingMetrics: Record<string, unknown>;
-    categoryCounts: Array<Record<string, unknown>>;
-    eisenhowerDistribution: Array<Record<string, unknown>>;
-    recentSubjects: Array<Record<string, unknown>>;
-  }>('/analytics/subjects');
+    users: FineCollectionUser[];
+    totalAccounts: number;
+  }>('/fine-collection/users');
 }
 
-export function getOcrSubmissions(params?: { status?: string; userId?: string; limit?: number }) {
-  const search = new URLSearchParams();
-  if (params?.status) search.set('status', params.status);
-  if (params?.userId) search.set('userId', params.userId);
-  if (params?.limit) search.set('limit', String(params.limit));
-  const query = search.toString();
-  return request<{ success: boolean; submissions: Array<Record<string, unknown>> }>(
-    `/ocr/submissions${query ? `?${query}` : ''}`,
-  );
-}
-
-export function patchOcrSubmission(
-  id: string,
-  payload: {
-    status?: 'pending' | 'approved' | 'review' | 'fined';
-    manualCorrection?: { questionsSolved?: number; accuracyPercent?: number; note?: string };
-  },
-) {
-  return request<{ success: boolean; submission: Record<string, unknown> }>(
-    `/ocr/submissions/${encodeURIComponent(id)}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    },
-  );
-}
-
+// Wallet
 export function getWalletOverview() {
   return request<{
     success: boolean;
@@ -170,37 +174,74 @@ export function postWalletCredit(payload: { userId: string; amount: number; note
   });
 }
 
+// OCR
+export function getOcrSubmissions(params?: { status?: string; userId?: string; limit?: number }) {
+  const search = new URLSearchParams();
+  if (params?.status) search.set('status', params.status);
+  if (params?.userId) search.set('userId', params.userId);
+  if (params?.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return request<{ success: boolean; submissions: Array<Record<string, unknown>> }>(
+    `/ocr/submissions${query ? `?${query}` : ''}`,
+  );
+}
+
+export function patchOcrSubmission(
+  id: string,
+  payload: {
+    status?: 'pending' | 'approved' | 'review' | 'fined';
+    manualCorrection?: { questionsSolved?: number; accuracyPercent?: number; note?: string };
+  },
+) {
+  return request<{ success: boolean; submission: Record<string, unknown> }>(
+    `/ocr/submissions/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+// Analytics
+export function getAnalytics() {
+  return request<AnalyticsPayload>('/analytics');
+}
+
+export function getAnalyticsSubjects() {
+  return request<SubjectsAnalyticsPayload>('/analytics/subjects');
+}
+
+// Badges
 export function getBadgeSummary() {
   return request<{
     success: boolean;
     totalBadges: number;
     distribution: Array<{ type: string; count: number }>;
+    recentEvents: Array<Record<string, unknown>>;
   }>('/badges/summary');
 }
 
 export function postBadgeCorrection(payload: { userId: string; type: string; note: string }) {
-  return request<{ success: boolean; correction: Record<string, unknown> }>(
-    '/badges/correction',
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    },
-  );
+  return request<{ success: boolean; correction: Record<string, unknown> }>('/badges/correction', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
+// System config
 export function getSystemConfig() {
-  return request<Record<string, unknown>>('/systemconfig');
+  return request<SystemConfig>('/systemconfig');
 }
 
-export function updateSystemConfig(payload: Record<string, unknown>) {
+export function updateSystemConfig(payload: SystemConfig) {
   return request<{ success: boolean }>('/systemconfig', {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
 }
 
-export function getLogs(query = '') {
-  return request<{ success: boolean; logs: Array<Record<string, unknown>> }>(
-    `/logs${query ? `?${query}` : ''}`,
-  );
+// Logs
+export function getLogs(params?: { action?: string; limit?: number }) {
+  const search = new URLSearchParams();
+  if (params?.action) search.set('action', params.action);
+  if (params?.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return request<{ success: boolean; logs: AdminLog[] }>(`/logs${query ? `?${query}` : ''}`);
 }
