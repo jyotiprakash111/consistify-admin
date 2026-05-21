@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { DataTable } from '@/components/ui/data-table';
+import { DataTableSkeleton } from '@/components/ui/data-table-skeleton';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { SelectInput, TextInput } from '@/components/ui/form-field';
 import { PageHeader } from '@/components/ui/page-header';
@@ -54,7 +55,8 @@ function UserAvatarCell({ user }: { user: AdminUser }) {
 
 export function UsersListView() {
   const dispatch = useAppDispatch();
-  const { users, filters, error } = useAppSelector(selectUsersList);
+  const { users, filters, error, status } = useAppSelector(selectUsersList);
+  const loading = status === 'loading';
 
   const displayed = useMemo(
     () => applyClientUserFilters(users, filters),
@@ -140,37 +142,46 @@ export function UsersListView() {
           <option value="asc">Asc</option>
         </SelectInput>
       </FilterBar>
-      <p className={`${mutedText} mb-4`}>
-        Showing {displayed.length} of {users.length} users
-      </p>
-      <DataTable
-        rows={displayed}
-        rowKey={(u) => u.id}
-        emptyMessage="No users match filters"
-        columns={[
-          {
-            key: 'user',
-            header: 'User',
-            render: (u) => <UserAvatarCell user={u} />,
-          },
-          { key: 'phone', header: 'Phone', render: (u) => u.phone || '—' },
-          { key: 'email', header: 'Email', render: (u) => u.email || '—' },
-          { key: 'gender', header: 'Gender', render: (u) => formatGender(u.gender) },
-          { key: 'tier', header: 'Tier', render: (u) => u.subscriptionTier || '—' },
-          { key: 'streak', header: 'Streak', render: (u) => u.currentStreakDays },
-          { key: 'wallet', header: 'Wallet', render: (u) => u.walletBalance },
-          { key: 'status', header: 'Status', render: (u) => getUserStatusLabel(u) },
-          {
-            key: 'actions',
-            header: '',
-            render: (u) => (
-              <Link href={`/users/${u.id}`} className={linkAccent}>
-                View
-              </Link>
-            ),
-          },
-        ]}
-      />
+      {loading ? (
+        <div className="mb-4 h-4 w-52 animate-pulse rounded-md bg-slate-200 dark:bg-zinc-700" />
+      ) : (
+        <p className={`${mutedText} mb-4`}>
+          Showing {displayed.length} of {users.length} users
+        </p>
+      )}
+
+      {loading ? (
+        <DataTableSkeleton columns={9} rows={10} />
+      ) : (
+        <DataTable
+          rows={displayed}
+          rowKey={(u) => u.id}
+          emptyMessage="No users match filters"
+          columns={[
+            {
+              key: 'user',
+              header: 'User',
+              render: (u) => <UserAvatarCell user={u} />,
+            },
+            { key: 'phone', header: 'Phone', render: (u) => u.phone || '—' },
+            { key: 'email', header: 'Email', render: (u) => u.email || '—' },
+            { key: 'gender', header: 'Gender', render: (u) => formatGender(u.gender) },
+            { key: 'tier', header: 'Tier', render: (u) => u.subscriptionTier || '—' },
+            { key: 'streak', header: 'Streak', render: (u) => u.currentStreakDays },
+            { key: 'wallet', header: 'Wallet', render: (u) => u.walletBalance },
+            { key: 'status', header: 'Status', render: (u) => getUserStatusLabel(u) },
+            {
+              key: 'actions',
+              header: '',
+              render: (u) => (
+                <Link href={`/users/${u.id}`} className={linkAccent}>
+                  View
+                </Link>
+              ),
+            },
+          ]}
+        />
+      )}
     </AdminShell>
   );
 }

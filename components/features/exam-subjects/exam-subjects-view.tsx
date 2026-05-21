@@ -116,146 +116,171 @@ export function ExamSubjectsView() {
 
       <AlertMessage error={error} success={message} />
 
-      <div className={`${panel} mb-6 p-5`}>
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-          Exam group
-        </label>
-        <select
-          className={`${select} max-w-md`}
-          value={selectedExamGroup}
-          onChange={(e) => onExamGroupChange(e.target.value)}
-        >
-          {groups.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
-        <p className={`${mutedText} mt-2 text-xs`}>
-          {templates.length} subject{templates.length === 1 ? '' : 's'} for {selectedExamGroup}
-        </p>
-      </div>
+      {loading ? (
+        <>
+          <div className={`${panel} mb-6 animate-pulse p-5`}>
+            <div className="mb-3 h-3 w-24 rounded-md bg-slate-200 dark:bg-zinc-700" />
+            <div className="h-10 max-w-md rounded-xl bg-slate-200 dark:bg-zinc-700" />
+            <div className="mt-3 h-3 w-48 rounded-md bg-slate-200 dark:bg-zinc-700" />
+          </div>
 
-      <div className={`${panelInset} mb-6 p-5`}>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">
-          {form.id ? (
-            <>
-              <Pencil className="size-4 text-indigo-600" strokeWidth={2} />
-              Edit subject
-            </>
-          ) : (
-            <>
-              <Plus className="size-4 text-indigo-600" strokeWidth={2} />
-              Add subject
-            </>
-          )}
-        </h2>
-        <form className={formGrid} onSubmit={onSubmit}>
-          <FormField label="Name">
-            <TextInput
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="e.g. Physics"
-              required
-            />
-          </FormField>
-          <FormField label="Quadrant">
+          <div className={`${panelInset} mb-6 animate-pulse p-5`}>
+            <div className="mb-4 h-4 w-28 rounded-md bg-slate-200 dark:bg-zinc-700" />
+            <div className={`${formGrid} max-w-lg`}>
+              <div className="h-16 rounded-xl bg-slate-200 dark:bg-zinc-700" />
+              <div className="h-16 rounded-xl bg-slate-200 dark:bg-zinc-700" />
+              <div className="h-16 rounded-xl bg-slate-200 dark:bg-zinc-700" />
+              <div className="h-10 w-32 rounded-xl bg-slate-200 dark:bg-zinc-700" />
+            </div>
+          </div>
+
+          <div className={panel}>
+            <div className="flex items-center gap-2 border-b border-slate-200/60 px-5 py-4 dark:border-zinc-800">
+              <div className="size-4 rounded-md bg-slate-200 dark:bg-zinc-700" />
+              <div className="h-4 w-20 animate-pulse rounded-md bg-slate-200 dark:bg-zinc-700" />
+            </div>
+            <div className="p-5">
+              <DataTableSkeleton columns={4} rows={8} />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={`${panel} mb-6 p-5`}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              Exam group
+            </label>
             <select
-              className={select}
-              value={form.quadrant}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, quadrant: e.target.value as SubjectQuadrant }))
-              }
+              className={`${select} max-w-md`}
+              value={selectedExamGroup}
+              onChange={(e) => onExamGroupChange(e.target.value)}
             >
-              {QUADRANT_OPTIONS.map((q) => (
-                <option key={q.value} value={q.value}>
-                  {q.label}
+              {groups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
                 </option>
               ))}
             </select>
-          </FormField>
-          <FormField label="Sort order">
-            <TextInput
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-              placeholder="Auto if empty"
-            />
-          </FormField>
-          <div className="flex flex-wrap gap-2">
-            <button type="submit" className={btnPrimary} disabled={saving}>
-              {saving ? 'Saving…' : form.id ? 'Update' : 'Add subject'}
-            </button>
-            {form.id ? (
-              <button type="button" className={btn} onClick={cancelEdit}>
-                Cancel
-              </button>
-            ) : null}
+            <p className={`${mutedText} mt-2 text-xs`}>
+              {templates.length} subject{templates.length === 1 ? '' : 's'} for {selectedExamGroup}
+            </p>
           </div>
-        </form>
-      </div>
 
-      <div className={panel}>
-        <div className="flex items-center gap-2 border-b border-slate-200/60 px-5 py-4 dark:border-zinc-800">
-          <BookOpen className="size-4 text-indigo-600 dark:text-indigo-400" strokeWidth={2} />
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Subjects</h2>
-        </div>
-
-        {loading ? (
-          <div className="p-5">
-            <DataTableSkeleton columns={4} rows={6} />
+          <div className={`${panelInset} mb-6 p-5`}>
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">
+              {form.id ? (
+                <>
+                  <Pencil className="size-4 text-indigo-600" strokeWidth={2} />
+                  Edit subject
+                </>
+              ) : (
+                <>
+                  <Plus className="size-4 text-indigo-600" strokeWidth={2} />
+                  Add subject
+                </>
+              )}
+            </h2>
+            <form className={formGrid} onSubmit={onSubmit}>
+              <FormField label="Name">
+                <TextInput
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Physics"
+                  required
+                />
+              </FormField>
+              <FormField label="Quadrant">
+                <select
+                  className={select}
+                  value={form.quadrant}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, quadrant: e.target.value as SubjectQuadrant }))
+                  }
+                >
+                  {QUADRANT_OPTIONS.map((q) => (
+                    <option key={q.value} value={q.value}>
+                      {q.label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Sort order">
+                <TextInput
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
+                  placeholder="Auto if empty"
+                />
+              </FormField>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" className={btnPrimary} disabled={saving}>
+                  {saving ? 'Saving…' : form.id ? 'Update' : 'Add subject'}
+                </button>
+                {form.id ? (
+                  <button type="button" className={btn} onClick={cancelEdit}>
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+            </form>
           </div>
-        ) : (
-          <div className="p-5 pt-0">
-            <DataTable
-              rows={templates}
-              rowKey={(t) => t.id}
-              emptyMessage={`No templates for ${selectedExamGroup}. Add subjects above.`}
-              columns={[
-                { key: 'order', header: '#', render: (t) => t.sortOrder },
-                { key: 'name', header: 'Name', render: (t) => t.name },
-                {
-                  key: 'quadrant',
-                  header: 'Quadrant',
-                  render: (t) => {
-                    const label = QUADRANT_OPTIONS.find((q) => q.value === t.quadrant)?.label;
-                    return (
-                      <span title={label}>
-                        <span className="font-mono text-xs font-semibold">{t.quadrant}</span>
-                      </span>
-                    );
+
+          <div className={panel}>
+            <div className="flex items-center gap-2 border-b border-slate-200/60 px-5 py-4 dark:border-zinc-800">
+              <BookOpen className="size-4 text-indigo-600 dark:text-indigo-400" strokeWidth={2} />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Subjects</h2>
+            </div>
+            <div className="p-5 pt-0">
+              <DataTable
+                rows={templates}
+                rowKey={(t) => t.id}
+                emptyMessage={`No templates for ${selectedExamGroup}. Add subjects above.`}
+                columns={[
+                  { key: 'order', header: '#', render: (t) => t.sortOrder },
+                  { key: 'name', header: 'Name', render: (t) => t.name },
+                  {
+                    key: 'quadrant',
+                    header: 'Quadrant',
+                    render: (t) => {
+                      const label = QUADRANT_OPTIONS.find((q) => q.value === t.quadrant)?.label;
+                      return (
+                        <span title={label}>
+                          <span className="font-mono text-xs font-semibold">{t.quadrant}</span>
+                        </span>
+                      );
+                    },
                   },
-                },
-                {
-                  key: 'actions',
-                  header: '',
-                  render: (t) => (
-                    <div className="flex justify-end gap-2">
-                      <button type="button" className={btn} onClick={() => startEdit(t)}>
-                        <Pencil className="size-3.5" strokeWidth={2} />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className={btnDanger}
-                        disabled={deletingId === t.id}
-                        onClick={() =>
-                          dispatch(
-                            removeExamSubjectTemplate({ id: t.id, examGroup: selectedExamGroup }),
-                          )
-                        }
-                      >
-                        <Trash2 className="size-3.5" strokeWidth={2} />
-                        {deletingId === t.id ? '…' : 'Delete'}
-                      </button>
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                  {
+                    key: 'actions',
+                    header: '',
+                    render: (t) => (
+                      <div className="flex justify-end gap-2">
+                        <button type="button" className={btn} onClick={() => startEdit(t)}>
+                          <Pencil className="size-3.5" strokeWidth={2} />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className={btnDanger}
+                          disabled={deletingId === t.id}
+                          onClick={() =>
+                            dispatch(
+                              removeExamSubjectTemplate({ id: t.id, examGroup: selectedExamGroup }),
+                            )
+                          }
+                        >
+                          <Trash2 className="size-3.5" strokeWidth={2} />
+                          {deletingId === t.id ? '…' : 'Delete'}
+                        </button>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
       </AdminShell>
   );
 }

@@ -13,8 +13,8 @@ import { SpacedRepetitionChart } from '@/components/features/analytics/charts/sp
 import { AlertMessage } from '@/components/ui/alert-message';
 import { ChartCard } from '@/components/ui/chart-card';
 import { JsonPanel } from '@/components/ui/json-panel';
-import { LoadingState } from '@/components/ui/loading-state';
-import { MetricCard } from '@/components/ui/metric-card';
+import { ChartCardSkeleton } from '@/components/ui/chart-card';
+import { MetricCard, MetricCardSkeleton } from '@/components/ui/metric-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { fetchAnalytics, selectAnalytics } from '@/lib/store/slices/analytics/analyticsSlice';
@@ -45,7 +45,32 @@ export function AnalyticsView() {
       <AlertMessage error={error} />
 
       {loading ? (
-        <LoadingState label="Loading analytics..." />
+        <>
+          <div className={`${gridCards} mb-8`}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <MetricCardSkeleton key={i} />
+            ))}
+          </div>
+
+          <section className="mb-8">
+            <div className="mb-4 h-6 w-56 animate-pulse rounded-md bg-slate-200 dark:bg-zinc-700" />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ChartCardSkeleton height={300} />
+              <ChartCardSkeleton height={300} />
+              <ChartCardSkeleton height={300} className="lg:col-span-2" />
+              <ChartCardSkeleton height={320} className="lg:col-span-2" />
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <div className="mb-4 h-6 w-48 animate-pulse rounded-md bg-slate-200 dark:bg-zinc-700" />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ChartCardSkeleton height={280} />
+              <ChartCardSkeleton height={280} />
+              <ChartCardSkeleton height={300} className="lg:col-span-2" />
+            </div>
+          </section>
+        </>
       ) : (
         <>
           <div className={`${gridCards} mb-8`}>

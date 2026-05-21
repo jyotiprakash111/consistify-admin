@@ -1,5 +1,10 @@
-import type { NextConfig } from "next";
-import path from "path";
+import type { NextConfig } from 'next';
+import path from 'path';
+
+const API_ORIGIN =
+  process.env.API_ORIGIN ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'https://persistify-production.up.railway.app';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -12,7 +17,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*', // Proxy to your backend
+        destination: `${API_ORIGIN}/api/:path*`,
       },
     ];
   },

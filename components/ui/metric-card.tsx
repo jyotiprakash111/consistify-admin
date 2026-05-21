@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import { card, mutedText } from '@/lib/ui-classes';
 
 export type MetricAccent = 'violet' | 'blue' | 'emerald' | 'amber' | 'rose' | 'indigo';
@@ -44,9 +45,19 @@ type MetricCardProps = {
   value: string | number;
   icon?: LucideIcon;
   accent?: MetricAccent;
+  /** Count up from previous value when numeric */
+  animateValue?: boolean;
+  decimals?: number;
 };
 
-export function MetricCard({ label, value, icon: Icon, accent = 'indigo' }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  icon: Icon,
+  accent = 'indigo',
+  animateValue = false,
+  decimals = 0,
+}: MetricCardProps) {
   const styles = accentStyles[accent];
 
   return (
@@ -66,7 +77,11 @@ export function MetricCard({ label, value, icon: Icon, accent = 'indigo' }: Metr
       <div
         className={`mt-3 text-3xl font-bold tracking-tight text-slate-900 tabular-nums dark:text-white ${Icon ? '' : styles.value}`}
       >
-        {value}
+        {animateValue && typeof value === 'number' ? (
+          <AnimatedNumber value={value} decimals={decimals} />
+        ) : (
+          value
+        )}
       </div>
     </div>
   );

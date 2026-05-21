@@ -19,16 +19,20 @@ export function FormField({ label, children, icon: Icon }: FormFieldProps) {
   );
 }
 
-export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={input} {...props} />;
+function mergeFieldClass(base: string, className?: string) {
+  return className ? `${base} ${className}` : base;
 }
 
-export function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={select} {...props} />;
+export function TextInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={mergeFieldClass(input, className)} {...props} />;
 }
 
-export function TextAreaInput(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={textarea} {...props} />;
+export function SelectInput({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={mergeFieldClass(select, className)} {...props} />;
+}
+
+export function TextAreaInput({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={mergeFieldClass(textarea, className)} {...props} />;
 }
 
 export function CheckboxField({

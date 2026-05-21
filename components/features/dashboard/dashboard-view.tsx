@@ -3,7 +3,7 @@
 import { AdminShell } from '@/components/layout/admin-shell';
 import { useEffect } from 'react';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { MetricCard } from '@/components/ui/metric-card';
+import { MetricCard, MetricCardSkeleton } from '@/components/ui/metric-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { fetchDashboard, selectDashboard } from '@/lib/store/slices/dashboard/dashboardSlice';
@@ -21,6 +21,10 @@ const METRIC_LABELS: Record<keyof DashboardMetrics, string> = {
   failedIncompleteSessions: 'Failed / incomplete (24h)',
 };
 
+const METRIC_DECIMALS: Partial<Record<keyof DashboardMetrics, number>> = {
+  totalFocusTimeHours: 1,
+};
+
 export function DashboardView() {
   const dispatch = useAppDispatch();
   const { metrics, error, status } = useAppSelector(selectDashboard);
@@ -36,11 +40,21 @@ export function DashboardView() {
       {metrics ? (
         <div className={gridCards}>
           {(Object.keys(METRIC_LABELS) as Array<keyof DashboardMetrics>).map((key) => (
-            <MetricCard key={key} label={METRIC_LABELS[key]} value={metrics[key]} />
+            <MetricCard
+              key={key}
+              label={METRIC_LABELS[key]}
+              value={metrics[key]}
+              animateValue
+              decimals={METRIC_DECIMALS[key] ?? 0}
+            />
           ))}
         </div>
       ) : status === 'loading' ? (
-        <p className="text-sm text-slate-500">Loading metrics...</p>
+        <div className={gridCards}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <MetricCardSkeleton key={i} />
+          ))}
+        </div>
       ) : null}
     </AdminShell>
   );
