@@ -12,6 +12,7 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   variant?: 'danger' | 'primary';
   loading?: boolean;
+  loadingLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   variant = 'primary',
   loading = false,
+  loadingLabel = 'Please wait…',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -73,7 +75,7 @@ export function ConfirmDialog({
             {loading ? (
               <>
                 <Loader2 className="size-4 animate-spin" strokeWidth={2} />
-                Updating…
+                {loadingLabel}
               </>
             ) : (
               confirmLabel

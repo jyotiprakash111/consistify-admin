@@ -5,10 +5,10 @@ import type {
   SessionInvitesSummary,
   SessionShareCodeRow,
 } from '@/lib/types/session-invites';
+import type { DashboardPayload } from '@/lib/types/dashboard';
 import type {
   AdminLog,
   AdminUser,
-  DashboardMetrics,
   FeatureOverrides,
   FineCollectionUser,
   SystemConfig,
@@ -82,7 +82,7 @@ export function adminLogout() {
 
 // Dashboard
 export function getDashboard() {
-  return request<{ success: boolean; metrics: DashboardMetrics }>('/dashboard');
+  return request<{ success: boolean } & DashboardPayload>('/dashboard');
 }
 
 // Users

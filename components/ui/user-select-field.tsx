@@ -10,7 +10,7 @@ import {
 } from '@/lib/store/slices/users/usersListSlice';
 import type { AdminUser } from '@/lib/types/admin';
 import { getUserDisplayName } from '@/lib/user-display';
-import { mutedText } from '@/lib/ui-classes';
+import { inputShell, mutedText } from '@/lib/ui-classes';
 
 export type UserSelectFieldProps = {
   value: string;
@@ -103,6 +103,7 @@ export function UserSelectField({
 
   const searchInput = (
     <TextInput
+      embedded={modern || combobox}
       value={filter}
       onChange={(e) => setFilter(e.target.value)}
       placeholder={
@@ -111,11 +112,6 @@ export function UserSelectField({
           : 'Filter by name, phone, email, or ID'
       }
       disabled={loading}
-      className={
-        modern || combobox
-          ? 'min-w-0 flex-1 border-0 bg-transparent shadow-none focus:ring-0'
-          : undefined
-      }
       onFocus={() => combobox && setListOpen(true)}
     />
   );
@@ -125,11 +121,8 @@ export function UserSelectField({
       value={value}
       onChange={(e) => handleSelect(e.target.value)}
       disabled={loading || filteredUsers.length === 0}
-      className={
-        modern
-          ? 'min-w-0 flex-1 border-0 bg-transparent shadow-none focus:ring-0 sm:max-w-[14rem]'
-          : undefined
-      }
+      embedded={modern}
+      className={modern ? 'sm:max-w-[14rem]' : undefined}
     >
       <option value="">{loading ? 'Loading…' : 'All users'}</option>
       {filteredUsers.map((user) => (
@@ -155,7 +148,7 @@ export function UserSelectField({
             }
           }}
         >
-          <div className="flex min-h-[42px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-zinc-700 dark:bg-zinc-950">
+          <div className={inputShell}>
             <Search
               className="size-4 shrink-0 text-slate-400 dark:text-zinc-500"
               strokeWidth={2}
@@ -239,7 +232,7 @@ export function UserSelectField({
         {label ? (
           <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">{label}</span>
         ) : null}
-        <div className="flex min-h-[42px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-indigo-500">
+        <div className={`${inputShell} overflow-hidden`}>
           <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
             <Search
               className="size-4 shrink-0 text-slate-400 dark:text-zinc-500"

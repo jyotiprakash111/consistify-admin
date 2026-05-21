@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getDashboard } from '@/lib/api';
-import type { DashboardMetrics } from '@/lib/types/admin';
+import { normalizeDashboardPayload } from '@/lib/dashboard/normalize-dashboard-payload';
+import type { DashboardPayload } from '@/lib/types/dashboard';
 import { asyncInitial, type AsyncSliceState } from '@/lib/store/types';
 
 export const fetchDashboard = createAsyncThunk(
@@ -8,17 +9,17 @@ export const fetchDashboard = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     const res = await getDashboard();
     if (!res.ok) return rejectWithValue(res.error);
-    return res.data.metrics;
+    return normalizeDashboardPayload(res.data);
   },
 );
 
 type DashboardState = AsyncSliceState & {
-  metrics: DashboardMetrics | null;
+  data: DashboardPayload | null;
 };
 
 const initialState: DashboardState = {
   ...asyncInitial,
-  metrics: null,
+  data: null,
 };
 
 const dashboardSlice = createSlice({
@@ -37,7 +38,7 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.metrics = action.payload;
+        state.data = action.payload;
       })
       .addCase(fetchDashboard.rejected, (state, action) => {
         state.status = 'failed';
@@ -50,3 +51,9 @@ export const { clearDashboardError } = dashboardSlice.actions;
 export default dashboardSlice.reducer;
 
 export const selectDashboard = (state: { dashboard: DashboardState }) => state.dashboard;
+
+export const selectDashboardData = (state: { dashboard: DashboardState }) =>
+  state.dashboard.data;
+
+export const selectDashboardMetrics = (state: { dashboard: DashboardState }) =>
+  state.dashboard.data?.metrics ?? null;

@@ -195,6 +195,7 @@ type UserDetailState = AsyncSliceState & {
   leaveSummary: UserLeaveSummary | null;
   leaves: UserLeaveRecord[];
   overrides: FeatureOverrides | null;
+  initialOverrides: FeatureOverrides | null;
   form: {
     note: string;
     avatar: string;
@@ -224,6 +225,7 @@ const initialState: UserDetailState = {
   leaveSummary: null,
   leaves: [],
   overrides: null,
+  initialOverrides: null,
   form: {
     note: '',
     avatar: '',
@@ -249,6 +251,11 @@ const userDetailSlice = createSlice({
     },
     setUserOverridesDraft(state, action: PayloadAction<FeatureOverrides>) {
       state.overrides = action.payload;
+    },
+    resetUserOverridesDraft(state) {
+      if (state.initialOverrides) {
+        state.overrides = { ...state.initialOverrides };
+      }
     },
     clearUserDetailMessages(state) {
       state.error = '';
@@ -287,6 +294,9 @@ const userDetailSlice = createSlice({
         state.leaveSummary = action.payload.leaveSummary;
         state.leaves = action.payload.leaves;
         state.overrides = action.payload.overrides;
+        state.initialOverrides = action.payload.overrides
+          ? { ...action.payload.overrides }
+          : null;
         state.form.avatar = action.payload.avatar;
       })
       .addCase(fetchUserDetail.rejected, (state, action) => {
@@ -342,15 +352,26 @@ const userDetailSlice = createSlice({
       .addCase(submitUserBadgeCorrection.rejected, (state, action) => {
         state.error = String(action.payload);
       })
-      .addCase(saveUserFeatureOverrides.fulfilled, (state, action) => setMessage(state, action.payload))
+      .addCase(saveUserFeatureOverrides.fulfilled, (state, action) => {
+        setMessage(state, action.payload);
+        if (state.overrides) {
+          state.initialOverrides = { ...state.overrides };
+        }
+      })
       .addCase(saveUserFeatureOverrides.rejected, (state, action) => {
         state.error = String(action.payload);
       })
+      .addCase(approveUserExtraLeave.pending, (state) => {
+        state.actionLoading = 'approveLeave';
+        state.error = '';
+      })
       .addCase(approveUserExtraLeave.fulfilled, (state, action) => {
+        state.actionLoading = null;
         setMessage(state, action.payload);
         state.form.leaveId = '';
       })
       .addCase(approveUserExtraLeave.rejected, (state, action) => {
+        state.actionLoading = null;
         state.error = String(action.payload);
       });
   },
@@ -360,9 +381,16 @@ export const {
   setUserDetailId,
   setUserDetailForm,
   setUserOverridesDraft,
+  resetUserOverridesDraft,
   clearUserDetailMessages,
   resetUserDetail,
 } = userDetailSlice.actions;
 export default userDetailSlice.reducer;
 
 export const selectUserDetail = (state: { userDetail: UserDetailState }) => state.userDetail;
+
+export const selectOverridesDirty = (state: { userDetail: UserDetailState }) => {
+  const { overrides, initialOverrides } = state.userDetail;
+  if (!overrides || !initialOverrides) return false;
+  return JSON.stringify(overrides) !== JSON.stringify(initialOverrides);
+};

@@ -17,6 +17,12 @@ function pickString(...values: unknown[]): string {
 const USED_STATUSES = new Set(['approved', 'used', 'completed', 'taken', 'active']);
 const PENDING_STATUSES = new Set(['pending', 'requested', 'awaiting']);
 
+export function isPendingExtraLeave(leave: UserLeaveRecord): boolean {
+  const status = leave.status.toLowerCase();
+  if (status.includes('extra_pending')) return true;
+  return Boolean(leave.isExtra && PENDING_STATUSES.has(status));
+}
+
 export function normalizeLeaveRecord(raw: Record<string, unknown>, index: number): UserLeaveRecord {
   return {
     id: pickString(raw.id, raw._id, raw.leaveId) || `leave-${index}`,

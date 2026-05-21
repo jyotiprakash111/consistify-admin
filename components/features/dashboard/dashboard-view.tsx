@@ -1,60 +1,105 @@
 'use client';
 
 import { AdminShell } from '@/components/layout/admin-shell';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { MetricCard, MetricCardSkeleton } from '@/components/ui/metric-card';
 import { PageHeader } from '@/components/ui/page-header';
+import { DashboardAlerts } from '@/components/features/dashboard/dashboard-alerts';
+import { DashboardGrowthSection } from '@/components/features/dashboard/dashboard-growth-section';
+import { DashboardMetricsGrid } from '@/components/features/dashboard/dashboard-metrics-grid';
+import { DashboardQueuesPanel } from '@/components/features/dashboard/dashboard-queues-panel';
+import { DashboardQuickLinks } from '@/components/features/dashboard/dashboard-quick-links';
+import { DashboardRecentLogs } from '@/components/features/dashboard/dashboard-recent-logs';
+import { DashboardSkeleton } from '@/components/features/dashboard/dashboard-skeleton';
+import { DashboardToolbar } from '@/components/features/dashboard/dashboard-toolbar';
+import { buildDashboardAlerts } from '@/lib/dashboard/build-alerts';
+import { ALL_METRIC_SECTIONS } from '@/lib/dashboard/metrics-config';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
-import { fetchDashboard, selectDashboard } from '@/lib/store/slices/dashboard/dashboardSlice';
-import type { DashboardMetrics } from '@/lib/types/admin';
-import { gridCards } from '@/lib/ui-classes';
-
-const METRIC_LABELS: Record<keyof DashboardMetrics, string> = {
-  totalUsers: 'Total users',
-  activeToday: 'Active today',
-  focusSessionsToday: 'Focus sessions today',
-  focusSessionsWeek: 'Focus sessions (7d)',
-  totalFocusTimeHours: 'Focus time (hours)',
-  totalWalletDeposits: 'Total wallet deposits',
-  totalActiveBalances: 'Active wallet balances',
-  failedIncompleteSessions: 'Failed / incomplete (24h)',
-};
-
-const METRIC_DECIMALS: Partial<Record<keyof DashboardMetrics, number>> = {
-  totalFocusTimeHours: 1,
-};
+import {
+  fetchDashboard,
+  selectDashboard,
+  selectDashboardData,
+} from '@/lib/store/slices/dashboard/dashboardSlice';
+import { mutedText } from '@/lib/ui-classes';
 
 export function DashboardView() {
   const dispatch = useAppDispatch();
-  const { metrics, error, status } = useAppSelector(selectDashboard);
+  const { error, status } = useAppSelector(selectDashboard);
+  const data = useAppSelector(selectDashboardData);
 
-  useEffect(() => {
+  const loading = status === 'loading' && !data;
+  const refreshing = status === 'loading' && Boolean(data);
+
+  const refresh = useCallback(() => {
     dispatch(fetchDashboard());
   }, [dispatch]);
 
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const alerts = useMemo(
+    () => (data?.metrics ? buildDashboardAlerts(data.metrics) : []),
+    [data?.metrics],
+  );
+
+  const hasGrowth = Boolean(data?.growthPoints?.length);
+
   return (
     <AdminShell>
-      <PageHeader title="Dashboard" description="Platform-wide metrics" apiHint="GET /dashboard" />
+      <PageHeader
+        title="Dashboard"
+        description="Platform overview, queues, and quick actions"
+        apiHint="GET /dashboard"
+      />
+
+      {data ? (
+        <DashboardToolbar
+          refreshedAt={data.refreshedAt}
+          loading={refreshing}
+          onRefresh={refresh}
+        />
+      ) : null}
+
       <AlertMessage error={error} />
-      {metrics ? (
-        <div className={gridCards}>
-          {(Object.keys(METRIC_LABELS) as Array<keyof DashboardMetrics>).map((key) => (
-            <MetricCard
-              key={key}
-              label={METRIC_LABELS[key]}
-              value={metrics[key]}
-              animateValue
-              decimals={METRIC_DECIMALS[key] ?? 0}
-            />
+
+      {loading ? (
+        <DashboardSkeleton />
+      ) : data ? (
+        <>
+          <DashboardAlerts alerts={alerts} />
+          <DashboardQuickLinks />
+
+          {ALL_METRIC_SECTIONS.map((section) => (
+            <section key={section.id} className="mb-8">
+              <h2 className={`${mutedText} mb-3 text-xs font-semibold uppercase tracking-wider`}>
+                {section.title}
+              </h2>
+              <DashboardMetricsGrid metrics={data.metrics} definitions={section.metrics} />
+            </section>
           ))}
-        </div>
-      ) : status === 'loading' ? (
-        <div className={gridCards}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <MetricCardSkeleton key={i} />
-          ))}
-        </div>
+
+          <section className="mb-8">
+            <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+              {hasGrowth ? (
+                <div className="lg:col-span-2">
+                  <DashboardGrowthSection
+                    growthPoints={data.growthPoints}
+                    standalone={false}
+                  />
+                </div>
+              ) : null}
+              <div className={hasGrowth ? undefined : 'lg:col-span-3'}>
+                <DashboardQueuesPanel
+                  metrics={data.metrics}
+                  layout={hasGrowth ? 'sidebar' : 'wide'}
+                />
+              </div>
+            </div>
+          </section>
+
+          <DashboardRecentLogs logs={data.recentLogs} />
+        </>
       ) : null}
     </AdminShell>
   );

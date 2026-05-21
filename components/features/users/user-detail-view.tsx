@@ -4,27 +4,52 @@ import { AdminShell } from '@/components/layout/admin-shell';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { CardSection } from '@/components/ui/card-section';
-import { CheckboxField, FormField, TextAreaInput, TextInput } from '@/components/ui/form-field';
-import { JsonPanel } from '@/components/ui/json-panel';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PageHeader } from '@/components/ui/page-header';
+import { UserAdminNotesSection } from '@/components/features/users/user-admin-notes-section';
+import { UserDetailOpsPanel } from '@/components/features/users/user-detail-ops-panel';
+import { UserDetailSkeleton } from '@/components/features/users/user-detail-skeleton';
+import { UserLeaveSection } from '@/components/features/users/user-leave-section';
+import { UserOcrTable } from '@/components/features/users/user-ocr-table';
+import { UserPendingExtraLeaves } from '@/components/features/users/user-pending-extra-leaves';
+import {
+  CollapsibleDataPanel,
+  DeviceSection,
+  ProfileDetailsGrid,
+  ProfileHero,
+} from '@/components/features/users/user-profile-ui';
+import { UserSessionsTable } from '@/components/features/users/user-sessions-table';
+import { UserSessionInvitesSection } from '@/components/features/users/user-session-invites-section';
+import { UserWalletStats } from '@/components/features/users/user-wallet-stats';
+import { WalletTransactionsTable } from '@/components/features/users/wallet-transactions-table';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import {
   addUserNote,
   adjustUserWallet,
   approveUserExtraLeave,
+  creditUserWallet,
   fetchUserDetail,
   resetUserDetail,
+  resetUserOverridesDraft,
   saveUserFeatureOverrides,
+  selectOverridesDirty,
   selectUserDetail,
   setUserDetailForm,
   setUserOverridesDraft,
+  submitUserBadgeCorrection,
   toggleUserDisabled,
   updateUserAvatar,
 } from '@/lib/store/slices/users/userDetailSlice';
-import { btn, btnDanger, btnPrimary, formGrid, mutedText } from '@/lib/ui-classes';
+import { getUserDisplayName } from '@/lib/user-display';
+import type { UserLeaveSummary } from '@/lib/types/admin';
+import { btn, linkAccent } from '@/lib/ui-classes';
+
+const emptyLeaveSummary: UserLeaveSummary = {
+  totalAllowed: 0,
+  used: 0,
+  remaining: 0,
+};
 
 export function UserDetailView() {
   const params = useParams<{ id: string }>();
@@ -36,12 +61,20 @@ export function UserDetailView() {
     walletTransactions,
     ocrSubmissions,
     adminNotes,
+    partnerRequestsSent,
+    partnerRequestsReceived,
+    sessionShareCodes,
+    leaveSummary,
+    leaves,
     overrides,
     form,
     error,
     message,
     status,
+    refreshing,
+    actionLoading,
   } = useAppSelector(selectUserDetail);
+  const overridesDirty = useAppSelector(selectOverridesDirty);
 
   useEffect(() => {
     if (userId) dispatch(fetchUserDetail(userId));
@@ -50,176 +83,140 @@ export function UserDetailView() {
     };
   }, [dispatch, userId]);
 
+  const loading = status === 'loading' && !user;
+  const displayName = user ? getUserDisplayName(user) : userId;
+
   return (
     <AdminShell>
       <PageHeader
         title="User profile"
-        description={user?.phone ?? userId}
+        description={user?.phone ?? displayName}
         apiHint="GET /users/:id · PATCH /users/:id"
         actions={
-          <Link href="/users" className={`${btn} text-sm`}>
-            Back to users
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {user ? (
+              <Link
+                href={`/logs?userId=${encodeURIComponent(userId)}`}
+                className={`${btn} text-sm`}
+              >
+                Activity logs
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              className={btn}
+              disabled={loading || refreshing}
+              onClick={() => dispatch(fetchUserDetail(userId))}
+              aria-label="Refresh profile"
+            >
+              <RefreshCw
+                className={`size-4 ${refreshing ? 'animate-spin' : ''}`}
+                strokeWidth={2}
+              />
+            </button>
+            <Link href="/users" className={`${btn} text-sm`}>
+              Back to users
+            </Link>
+          </div>
         }
       />
       <AlertMessage error={error} success={message} />
-      {status === 'loading' && !user ? (
-        <LoadingState />
+
+      {loading ? (
+        <UserDetailSkeleton />
       ) : user ? (
         <div className="space-y-6">
-          <CardSection title="Summary">
-            <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <div>Email: {user.email}</div>
-              <div>Wallet: {user.walletBalance}</div>
-              <div>Streak: {user.currentStreakDays} days</div>
-              <div>Compliance: {user.complianceRate}%</div>
-              <div>Fines collected: {user.totalFineCollected}</div>
-              <div>Tags: {user.tags?.join(', ') || '—'}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => dispatch(toggleUserDisabled(userId))}
-              className={`${user.isDisabled ? btnPrimary : btnDanger} mt-4`}
-            >
-              {user.isDisabled ? 'Enable user' : 'Disable user'}
-            </button>
-          </CardSection>
+          <ProfileHero user={user} />
+          <UserWalletStats user={user} />
+          <DeviceSection user={user} />
+          <ProfileDetailsGrid user={user} />
 
-          <CardSection title="Feature overrides">
-            <p className={`${mutedText} mb-3`}>PATCH /users/:id/feature-overrides</p>
-            {overrides ? (
-              <div className="space-y-2">
-                <CheckboxField
-                  label="Wallet enabled"
-                  checked={overrides.walletEnabled}
-                  onChange={(v) => dispatch(setUserOverridesDraft({ ...overrides, walletEnabled: v }))}
-                />
-                <CheckboxField
-                  label="Badge rewards enabled"
-                  checked={overrides.badgeRewardsEnabled}
-                  onChange={(v) => dispatch(setUserOverridesDraft({ ...overrides, badgeRewardsEnabled: v }))}
-                />
-                <CheckboxField
-                  label="Email notifications"
-                  checked={overrides.emailNotificationsEnabled}
-                  onChange={(v) =>
-                    dispatch(setUserOverridesDraft({ ...overrides, emailNotificationsEnabled: v }))
-                  }
-                />
-                <CheckboxField
-                  label="Push notifications"
-                  checked={overrides.pushNotificationsEnabled}
-                  onChange={(v) =>
-                    dispatch(setUserOverridesDraft({ ...overrides, pushNotificationsEnabled: v }))
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => dispatch(saveUserFeatureOverrides({ userId, overrides }))}
-                  className={`${btnPrimary} mt-2`}
-                >
-                  Save overrides
-                </button>
-              </div>
-            ) : (
-              <LoadingState label="Loading overrides..." />
-            )}
-          </CardSection>
+          <UserDetailOpsPanel
+            isDisabled={Boolean(user.isDisabled)}
+            overrides={overrides}
+            overridesDirty={overridesDirty}
+            form={form}
+            actionLoading={actionLoading}
+            onOverridesChange={(next) => dispatch(setUserOverridesDraft(next))}
+            onSaveOverrides={() => {
+              if (overrides) {
+                dispatch(saveUserFeatureOverrides({ userId, overrides }));
+              }
+            }}
+            onResetOverrides={() => dispatch(resetUserOverridesDraft())}
+            onFormChange={(patch) => dispatch(setUserDetailForm(patch))}
+            onUpdateAvatar={() => dispatch(updateUserAvatar({ userId, avatar: form.avatar }))}
+            onAddNote={() => {
+              const trimmed = form.note.trim();
+              if (trimmed) dispatch(addUserNote({ userId, note: trimmed }));
+            }}
+            onWalletAdjust={() => {
+              const amount = Number(form.walletAmount);
+              if (!Number.isFinite(amount)) return;
+              const reason = form.walletReason.trim();
+              if (!reason) return;
+              dispatch(adjustUserWallet({ userId, amount, reason }));
+            }}
+            onWalletCredit={() => {
+              const amount = Number(form.walletCreditAmount);
+              if (!Number.isFinite(amount) || amount <= 0) return;
+              const note = form.walletCreditNote.trim() || 'Manual credit';
+              dispatch(creditUserWallet({ userId, amount, note }));
+            }}
+            onBadgeCorrection={() => {
+              const type = form.badgeType.trim();
+              const note = form.badgeNote.trim();
+              if (!type || !note) return;
+              dispatch(submitUserBadgeCorrection({ userId, type, note }));
+            }}
+            onToggleDisabled={() => dispatch(toggleUserDisabled(userId))}
+          />
 
-          <CardSection title="Avatar">
-            <div className={formGrid}>
-              <TextInput
-                value={form.avatar}
-                onChange={(e) => dispatch(setUserDetailForm({ avatar: e.target.value }))}
-                placeholder="avatar id"
-              />
-              <button
-                type="button"
-                onClick={() => dispatch(updateUserAvatar({ userId, avatar: form.avatar }))}
-                className={`${btnPrimary} w-fit`}
-              >
-                Update avatar
-              </button>
-            </div>
-          </CardSection>
+          <UserPendingExtraLeaves
+            leaves={leaves}
+            actionLoading={actionLoading === 'approveLeave'}
+            onApprove={(leaveId) => dispatch(approveUserExtraLeave({ userId, leaveId }))}
+          />
 
-          <CardSection title="Wallet adjustment">
-            <div className={formGrid}>
-              <FormField label="Amount (+/-)">
-                <TextInput
-                  value={form.walletAmount}
-                  onChange={(e) => dispatch(setUserDetailForm({ walletAmount: e.target.value }))}
-                />
-              </FormField>
-              <FormField label="Reason">
-                <TextInput
-                  value={form.walletReason}
-                  onChange={(e) => dispatch(setUserDetailForm({ walletReason: e.target.value }))}
-                />
-              </FormField>
-              <button
-                type="button"
-                onClick={() => {
-                  const amount = Number(form.walletAmount);
-                  if (!Number.isFinite(amount)) return;
-                  if (!form.walletReason.trim()) return;
-                  dispatch(adjustUserWallet({ userId, amount, reason: form.walletReason.trim() }));
-                }}
-                className={`${btnPrimary} w-fit`}
-              >
-                Apply adjustment
-              </button>
-            </div>
-          </CardSection>
+          <UserLeaveSection
+            summary={leaveSummary ?? emptyLeaveSummary}
+            leaves={leaves}
+            loading={refreshing}
+          />
 
-          <CardSection title="Admin note">
-            <div className={formGrid}>
-              <TextAreaInput
-                value={form.note}
-                onChange={(e) => dispatch(setUserDetailForm({ note: e.target.value }))}
-                rows={3}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const trimmed = form.note.trim();
-                  if (trimmed) dispatch(addUserNote({ userId, note: trimmed }));
-                }}
-                className={`${btnPrimary} w-fit`}
-              >
-                Add note
-              </button>
-            </div>
-          </CardSection>
+          <WalletTransactionsTable
+            transactions={walletTransactions}
+            loading={refreshing}
+          />
 
-          <CardSection title="Approve extra leave">
-            <p className={`${mutedText} mb-2`}>POST /users/:userId/leaves/:leaveId/approve-extra</p>
-            <div className={formGrid}>
-              <FormField label="Leave ID">
-                <TextInput
-                  value={form.leaveId}
-                  onChange={(e) => dispatch(setUserDetailForm({ leaveId: e.target.value }))}
-                />
-              </FormField>
-              <button
-                type="button"
-                onClick={() => {
-                  if (form.leaveId.trim()) {
-                    dispatch(approveUserExtraLeave({ userId, leaveId: form.leaveId.trim() }));
-                  }
-                }}
-                className={`${btnPrimary} w-fit`}
-              >
-                Approve extra leave
-              </button>
-            </div>
-          </CardSection>
+          <UserSessionInvitesSection
+            userId={userId}
+            sent={partnerRequestsSent}
+            received={partnerRequestsReceived}
+            shareCodes={sessionShareCodes}
+            loading={refreshing}
+          />
 
-          <JsonPanel title="Admin notes" data={adminNotes} />
-          <JsonPanel title="Sessions" data={sessions} />
-          <JsonPanel title="Transactions" data={walletTransactions} />
-          <JsonPanel title="OCR submissions" data={ocrSubmissions} />
+          <UserAdminNotesSection notes={adminNotes} />
+          <UserSessionsTable sessions={sessions} />
+          <UserOcrTable submissions={ocrSubmissions} />
+
+          <p className="text-center text-xs text-slate-500 dark:text-zinc-500">
+            <Link href={`/extra-leaves`} className={linkAccent}>
+              Extra leaves queue
+            </Link>
+            {' · '}
+            <Link href={`/wallet?userId=${encodeURIComponent(userId)}`} className={linkAccent}>
+              Wallet admin
+            </Link>
+          </p>
+
+          <CollapsibleDataPanel title="Raw profile payload" count={1} data={user} />
         </div>
+      ) : status === 'failed' ? (
+        <p className="text-sm text-rose-600 dark:text-rose-400">
+          Could not load this user. Check the ID or try refresh.
+        </p>
       ) : null}
     </AdminShell>
   );

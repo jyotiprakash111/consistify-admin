@@ -5,17 +5,6 @@ export type FeatureOverrides = {
   pushNotificationsEnabled: boolean;
 };
 
-export type DashboardMetrics = {
-  totalUsers: number;
-  activeToday: number;
-  focusSessionsToday: number;
-  focusSessionsWeek: number;
-  totalFocusTimeHours: number;
-  totalWalletDeposits: number;
-  totalActiveBalances: number;
-  failedIncompleteSessions: number;
-};
-
 export type AdminUser = {
   id: string;
   name?: string;

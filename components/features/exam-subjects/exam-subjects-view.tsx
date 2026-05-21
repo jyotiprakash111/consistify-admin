@@ -4,6 +4,7 @@ import { AdminShell } from '@/components/layout/admin-shell';
 import { FormEvent, useEffect, useState } from 'react';
 import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AlertMessage } from '@/components/ui/alert-message';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table';
 import { DataTableSkeleton } from '@/components/ui/data-table-skeleton';
 import { FormField, TextInput } from '@/components/ui/form-field';
@@ -58,6 +59,7 @@ export function ExamSubjectsView() {
   const loading = status === 'loading';
 
   const [form, setForm] = useState<FormState>(() => emptyForm('NEET'));
+  const [deleteTarget, setDeleteTarget] = useState<ExamSubjectTemplate | null>(null);
 
   useEffect(() => {
     dispatch(fetchExamSubjects(selectedExamGroup));
@@ -82,6 +84,29 @@ export function ExamSubjectsView() {
 
   function cancelEdit() {
     setForm(emptyForm(selectedExamGroup));
+  }
+
+  function requestDelete(template: ExamSubjectTemplate) {
+    setDeleteTarget(template);
+  }
+
+  function cancelDelete() {
+    if (deletingId) return;
+    setDeleteTarget(null);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    dispatch(
+      removeExamSubjectTemplate({ id: deleteTarget.id, examGroup: selectedExamGroup }),
+    ).then((result) => {
+      if (removeExamSubjectTemplate.fulfilled.match(result)) {
+        if (form.id === deleteTarget.id) {
+          setForm(emptyForm(selectedExamGroup));
+        }
+        setDeleteTarget(null);
+      }
+    });
   }
 
   function onSubmit(e: FormEvent) {
@@ -263,11 +288,7 @@ export function ExamSubjectsView() {
                           type="button"
                           className={btnDanger}
                           disabled={deletingId === t.id}
-                          onClick={() =>
-                            dispatch(
-                              removeExamSubjectTemplate({ id: t.id, examGroup: selectedExamGroup }),
-                            )
-                          }
+                          onClick={() => requestDelete(t)}
                         >
                           <Trash2 className="size-3.5" strokeWidth={2} />
                           {deletingId === t.id ? '…' : 'Delete'}
@@ -281,6 +302,22 @@ export function ExamSubjectsView() {
           </div>
         </>
       )}
-      </AdminShell>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete subject?"
+        description={
+          deleteTarget
+            ? `Remove "${deleteTarget.name}" from ${selectedExamGroup}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={Boolean(deleteTarget && deletingId === deleteTarget.id)}
+        loadingLabel="Deleting…"
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+      />
+    </AdminShell>
   );
 }

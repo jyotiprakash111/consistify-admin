@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { input, labelRow, select, textarea } from '@/lib/ui-classes';
+import { input, inputEmbedded, labelRow, select, selectEmbedded, textarea } from '@/lib/ui-classes';
 
 type FormFieldProps = {
   label: string;
@@ -23,12 +23,23 @@ function mergeFieldClass(base: string, className?: string) {
   return className ? `${base} ${className}` : base;
 }
 
-export function TextInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={mergeFieldClass(input, className)} {...props} />;
+type TextInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  /** No border/ring — for use inside `inputShell` (combobox, etc.) */
+  embedded?: boolean;
+};
+
+export function TextInput({ className, embedded, ...props }: TextInputProps) {
+  const base = embedded ? inputEmbedded : input;
+  return <input className={mergeFieldClass(base, className)} {...props} />;
 }
 
-export function SelectInput({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={mergeFieldClass(select, className)} {...props} />;
+type SelectInputProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
+  embedded?: boolean;
+};
+
+export function SelectInput({ className, embedded, ...props }: SelectInputProps) {
+  const base = embedded ? selectEmbedded : select;
+  return <select className={mergeFieldClass(base, className)} {...props} />;
 }
 
 export function TextAreaInput({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {

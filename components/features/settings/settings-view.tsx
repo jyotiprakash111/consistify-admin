@@ -1,144 +1,168 @@
 'use client';
 
 import { AdminShell } from '@/components/layout/admin-shell';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertMessage } from '@/components/ui/alert-message';
-import { CardSection } from '@/components/ui/card-section';
-import { CheckboxField, FormField, TextAreaInput, TextInput } from '@/components/ui/form-field';
-import { LoadingState } from '@/components/ui/loading-state';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
+import { SettingsConfigSection } from '@/components/features/settings/settings-config-section';
+import { SettingsRawJsonPanel } from '@/components/features/settings/settings-raw-json-panel';
+import { SettingsSaveBar } from '@/components/features/settings/settings-save-bar';
+import { SettingsSkeleton } from '@/components/features/settings/settings-skeleton';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import type { ConfigFieldDef, DangerousFieldKind } from '@/lib/settings/config-sections';
+import { SYSTEM_CONFIG_SECTIONS } from '@/lib/settings/config-sections';
+import { validateSystemConfig } from '@/lib/settings/validate-config';
 import {
   fetchSystemConfig,
-  patchConfigSection,
+  patchConfigField,
+  resetSettingsDraft,
   saveSystemConfig,
   saveSystemConfigRaw,
   selectSettings,
+  selectSettingsDirty,
   setSettingsRawJson,
-  setSystemConfig,
 } from '@/lib/store/slices/settings/settingsSlice';
-import type { SystemConfig } from '@/lib/types/admin';
-import { btnPrimary, formGrid } from '@/lib/ui-classes';
+
+type PendingDangerous = {
+  kind: DangerousFieldKind;
+  field: ConfigFieldDef;
+  value: string | number | boolean;
+};
 
 export function SettingsView() {
   const dispatch = useAppDispatch();
-  const { config, rawJson, error, message } = useAppSelector(selectSettings);
+  const { config, rawJson, error, message, status, saving } = useAppSelector(selectSettings);
+  const dirty = useAppSelector(selectSettingsDirty);
+  const [pendingDangerous, setPendingDangerous] = useState<PendingDangerous | null>(null);
+
+  const loading = status === 'loading' && !config;
+
+  const validationError = useMemo(
+    () => (config ? validateSystemConfig(config) : null),
+    [config],
+  );
 
   useEffect(() => {
     dispatch(fetchSystemConfig());
   }, [dispatch]);
 
-  function setBool(section: keyof SystemConfig, key: string, value: boolean) {
-    dispatch(patchConfigSection({ section, key, value }));
+  const applyField = useCallback(
+    (field: ConfigFieldDef, value: string | number | boolean) => {
+      dispatch(patchConfigField({ section: field.section, key: field.key, value }));
+    },
+    [dispatch],
+  );
+
+  const handleFieldChange = useCallback(
+    (field: ConfigFieldDef, value: string | number | boolean) => {
+      if (field.dangerous === 'maintenance' && value === true) {
+        setPendingDangerous({ kind: 'maintenance', field, value });
+        return;
+      }
+      if (field.dangerous === 'payment-live' && value === 'live') {
+        setPendingDangerous({ kind: 'payment-live', field, value });
+        return;
+      }
+      applyField(field, value);
+    },
+    [applyField],
+  );
+
+  function confirmDangerous() {
+    if (!pendingDangerous) return;
+    applyField(pendingDangerous.field, pendingDangerous.value);
+    setPendingDangerous(null);
   }
+
+  function cancelDangerous() {
+    setPendingDangerous(null);
+  }
+
+  function handleSaveStructured() {
+    if (!config || validationError) return;
+    dispatch(saveSystemConfig(config));
+  }
+
+  function handleSaveRaw() {
+    dispatch(saveSystemConfigRaw(rawJson));
+  }
+
+  const dangerousDialog = pendingDangerous
+    ? pendingDangerous.kind === 'maintenance'
+      ? {
+          title: 'Enable maintenance mode?',
+          description:
+            'Users will not be able to start new focus sessions until maintenance is turned off.',
+          confirmLabel: 'Enable maintenance',
+        }
+      : {
+          title: 'Switch payment to live mode?',
+          description:
+            'Real payments will be processed. Ensure Razorpay live keys and webhooks are configured.',
+          confirmLabel: 'Use live mode',
+        }
+    : null;
 
   return (
     <AdminShell>
       <PageHeader
         title="System config"
-        description="Wallet, sessions, gamification, and payment settings"
+        description="Wallet, sessions, gamification, notifications, and payment"
         apiHint="GET /systemconfig · PUT /systemconfig"
       />
       <AlertMessage error={error} success={message} />
-      {!config ? (
-        <LoadingState label="Loading config..." />
-      ) : (
-        <div className="space-y-6">
-          <CardSection title="Wallet">
-            <CheckboxField
-              label="Wallet enabled"
-              checked={config.wallet.enabled}
-              onChange={(v) => setBool('wallet', 'enabled', v)}
-            />
-            <div className={`${formGrid} mt-3`}>
-              <FormField label="Deposit amount (₹)">
-                <TextInput
-                  type="number"
-                  value={config.wallet.depositAmountInRupees}
-                  onChange={(e) =>
-                    dispatch(
-                      setSystemConfig({
-                        ...config,
-                        wallet: { ...config.wallet, depositAmountInRupees: Number(e.target.value) || 0 },
-                      }),
-                    )
-                  }
-                />
-              </FormField>
-              <FormField label="Session failure fine">
-                <TextInput
-                  type="number"
-                  value={config.wallet.sessionFailureFine}
-                  onChange={(e) =>
-                    dispatch(
-                      setSystemConfig({
-                        ...config,
-                        wallet: { ...config.wallet, sessionFailureFine: Number(e.target.value) || 0 },
-                      }),
-                    )
-                  }
-                />
-              </FormField>
-              <FormField label="Phone tilt fine">
-                <TextInput
-                  type="number"
-                  value={config.wallet.phubFine}
-                  onChange={(e) =>
-                    dispatch(
-                      setSystemConfig({
-                        ...config,
-                        wallet: { ...config.wallet, phubFine: Number(e.target.value) || 0 },
-                      }),
-                    )
-                  }
-                />
-              </FormField>
-            </div>
-          </CardSection>
 
-          <CardSection title="Sessions">
-            <CheckboxField
-              label="Maintenance mode"
-              checked={config.sessions.maintenanceMode}
-              onChange={(v) => setBool('sessions', 'maintenanceMode', v)}
-            />
-          </CardSection>
-
-          <CardSection title="Gamification">
-            <div className="space-y-2">
-              <CheckboxField
-                label="Badges enabled"
-                checked={config.gamification.badgesEnabled}
-                onChange={(v) => setBool('gamification', 'badgesEnabled', v)}
-              />
-              <CheckboxField
-                label="Coins enabled"
-                checked={config.gamification.coinsEnabled}
-                onChange={(v) => setBool('gamification', 'coinsEnabled', v)}
-              />
-              <CheckboxField
-                label="Sprint mode enabled"
-                checked={config.gamification.sprintModeEnabled}
-                onChange={(v) => setBool('gamification', 'sprintModeEnabled', v)}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => config && dispatch(saveSystemConfig(config))}
-              className={`${btnPrimary} mt-4`}
+      {loading ? (
+        <SettingsSkeleton />
+      ) : config ? (
+        <>
+          {config.sessions.maintenanceMode ? (
+            <div
+              className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+              role="status"
             >
-              Save structured config
-            </button>
-          </CardSection>
-        </div>
-      )}
+              Maintenance mode is <strong>on</strong> — new sessions are blocked.
+            </div>
+          ) : null}
 
-      <CardSection title="Raw JSON (advanced)" className="mt-8">
-        <TextAreaInput value={rawJson} onChange={(e) => dispatch(setSettingsRawJson(e.target.value))} rows={16} />
-        <button type="button" onClick={() => dispatch(saveSystemConfigRaw(rawJson))} className={`${btnPrimary} mt-3`}>
-          Save raw JSON
-        </button>
-      </CardSection>
+          <div className="space-y-6 pb-4">
+            {SYSTEM_CONFIG_SECTIONS.map((section) => (
+              <SettingsConfigSection
+                key={section.id}
+                section={section}
+                config={config}
+                onFieldChange={handleFieldChange}
+              />
+            ))}
+          </div>
+
+          <SettingsSaveBar
+            dirty={dirty}
+            saving={saving}
+            validationError={validationError}
+            onSave={handleSaveStructured}
+            onReset={() => dispatch(resetSettingsDraft())}
+          />
+
+          <SettingsRawJsonPanel
+            rawJson={rawJson}
+            saving={saving}
+            onChange={(v) => dispatch(setSettingsRawJson(v))}
+            onSave={handleSaveRaw}
+          />
+        </>
+      ) : null}
+
+      <ConfirmDialog
+        open={pendingDangerous !== null}
+        title={dangerousDialog?.title ?? ''}
+        description={dangerousDialog?.description ?? ''}
+        confirmLabel={dangerousDialog?.confirmLabel ?? 'Confirm'}
+        variant="danger"
+        onConfirm={confirmDangerous}
+        onCancel={cancelDangerous}
+      />
     </AdminShell>
   );
 }
