@@ -31,7 +31,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
 
   return (
     <div
-      className="inline-flex rounded-lg border border-slate-200/80 bg-slate-100/80 p-0.5 dark:border-slate-700 dark:bg-slate-800/80"
+      className="inline-flex w-full rounded-xl border border-slate-200/70 bg-slate-100/80 p-0.5 dark:border-zinc-700 dark:bg-zinc-900/80"
       role="group"
       aria-label="Theme"
     >

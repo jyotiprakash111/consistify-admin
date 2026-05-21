@@ -11,10 +11,15 @@ import badgesReducer from '@/lib/store/slices/badges/badgesSlice';
 import analyticsReducer from '@/lib/store/slices/analytics/analyticsSlice';
 import settingsReducer from '@/lib/store/slices/settings/settingsSlice';
 import logsReducer from '@/lib/store/slices/logs/logsSlice';
+import sessionInvitesReducer from '@/lib/store/slices/session-invites/sessionInvitesSlice';
+import extraLeavesReducer from '@/lib/store/slices/extra-leaves/extraLeavesSlice';
+import examSubjectsReducer from '@/lib/store/slices/exam-subjects/examSubjectsSlice';
+import uiReducer from '@/lib/store/slices/ui/uiSlice';
 
 export const makeStore = () =>
   configureStore({
     reducer: {
+      ui: uiReducer,
       auth: authReducer,
       dashboard: dashboardReducer,
       usersList: usersListReducer,
@@ -27,6 +32,9 @@ export const makeStore = () =>
       analytics: analyticsReducer,
       settings: settingsReducer,
       logs: logsReducer,
+      sessionInvites: sessionInvitesReducer,
+      extraLeaves: extraLeavesReducer,
+      examSubjects: examSubjectsReducer,
     },
     devTools: process.env.NODE_ENV !== 'production',
   });

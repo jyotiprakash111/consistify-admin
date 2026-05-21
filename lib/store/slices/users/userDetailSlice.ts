@@ -3,20 +3,53 @@ import {
   approveExtraLeave,
   getUserDetail,
   getUserFeatureOverrides,
+  getUserLeaves,
+  getWalletTransactions,
   patchUser,
   patchUserFeatureOverrides,
+  postBadgeCorrection,
+  postWalletCredit,
 } from '@/lib/api';
-import type { AdminUser, FeatureOverrides } from '@/lib/types/admin';
+import { parseLeavesPayload } from '@/lib/leave-utils';
+import { showErrorFlash, showSuccessFlash } from '@/lib/store/slices/ui/uiSlice';
+import type { AdminUser, FeatureOverrides, UserLeaveRecord, UserLeaveSummary } from '@/lib/types/admin';
+import type { PartnerRequestRow, SessionShareCodeRow } from '@/lib/types/session-invites';
 import { asyncInitial, type AsyncSliceState } from '@/lib/store/types';
+import {
+  filterTransactionsForUser,
+  mergeWalletTransactions,
+  normalizeWalletTransactions,
+  type WalletTransactionRow,
+} from '@/lib/wallet-transaction-utils';
 
 export const fetchUserDetail = createAsyncThunk(
   'userDetail/fetch',
   async (userId: string, { rejectWithValue }) => {
-    const [detailRes, overridesRes] = await Promise.all([
+    const [detailRes, overridesRes, walletTxRes, leavesRes] = await Promise.all([
       getUserDetail(userId),
       getUserFeatureOverrides(userId),
+      getWalletTransactions({ limit: 100, userId }),
+      getUserLeaves(userId),
     ]);
     if (!detailRes.ok) return rejectWithValue(detailRes.error);
+
+    const user = detailRes.data.user;
+    let leavePayload: Record<string, unknown> = {
+      summary: detailRes.data.leaveSummary,
+      leaves: detailRes.data.leaves,
+    };
+    if (leavesRes.ok) {
+      leavePayload = { ...leavePayload, ...leavesRes.data };
+    }
+    const { summary: leaveSummary, leaves } = parseLeavesPayload(leavePayload, user);
+
+    const detailTx = normalizeWalletTransactions(detailRes.data.transactions ?? []);
+    const globalRaw = walletTxRes.ok
+      ? filterTransactionsForUser(walletTxRes.data.transactions ?? [], userId)
+      : [];
+    const globalTx = normalizeWalletTransactions(globalRaw);
+    const walletTransactions = mergeWalletTransactions(detailTx, globalTx);
+
     const overrides: FeatureOverrides | null = overridesRes.ok
       ? {
           walletEnabled: overridesRes.data.walletEnabled,
@@ -25,14 +58,20 @@ export const fetchUserDetail = createAsyncThunk(
           pushNotificationsEnabled: overridesRes.data.pushNotificationsEnabled,
         }
       : null;
+
     return {
-      user: detailRes.data.user,
+      user,
       sessions: detailRes.data.sessions ?? [],
-      transactions: detailRes.data.transactions ?? [],
+      walletTransactions,
       ocrSubmissions: detailRes.data.ocrSubmissions ?? [],
       adminNotes: detailRes.data.adminNotes ?? [],
+      partnerRequestsSent: detailRes.data.partnerRequestsSent ?? [],
+      partnerRequestsReceived: detailRes.data.partnerRequestsReceived ?? [],
+      sessionShareCodes: detailRes.data.sessionShareCodes ?? [],
       overrides,
-      avatar: String(detailRes.data.user.avatar ?? ''),
+      avatar: String(user.avatar ?? ''),
+      leaveSummary,
+      leaves,
     };
   },
 );
@@ -44,9 +83,16 @@ export const toggleUserDisabled = createAsyncThunk(
     const user = state.userDetail.user;
     if (!user) return rejectWithValue('No user loaded');
     const res = await patchUser(userId, { isDisabled: !user.isDisabled });
-    if (!res.ok) return rejectWithValue(res.error);
+    if (!res.ok) {
+      dispatch(showErrorFlash(res.error));
+      return rejectWithValue(res.error);
+    }
     await dispatch(fetchUserDetail(userId));
-    return user.isDisabled ? 'User enabled' : 'User disabled';
+    const message = user.isDisabled
+      ? 'User account enabled successfully'
+      : 'User account disabled successfully';
+    dispatch(showSuccessFlash(message));
+    return message;
   },
 );
 
@@ -83,6 +129,31 @@ export const adjustUserWallet = createAsyncThunk(
   },
 );
 
+export const creditUserWallet = createAsyncThunk(
+  'userDetail/walletCredit',
+  async (
+    { userId, amount, note }: { userId: string; amount: number; note: string },
+    { dispatch, rejectWithValue },
+  ) => {
+    const res = await postWalletCredit({ userId, amount, note });
+    if (!res.ok) return rejectWithValue(res.error);
+    await dispatch(fetchUserDetail(userId));
+    return `Wallet credited. New balance: ₹${res.data.newBalance.toLocaleString('en-IN')}`;
+  },
+);
+
+export const submitUserBadgeCorrection = createAsyncThunk(
+  'userDetail/badgeCorrection',
+  async (
+    { userId, type, note }: { userId: string; type: string; note: string },
+    { rejectWithValue },
+  ) => {
+    const res = await postBadgeCorrection({ userId, type, note });
+    if (!res.ok) return rejectWithValue(res.error);
+    return 'Badge correction submitted';
+  },
+);
+
 export const saveUserFeatureOverrides = createAsyncThunk(
   'userDetail/saveOverrides',
   async (
@@ -98,26 +169,41 @@ export const saveUserFeatureOverrides = createAsyncThunk(
 
 export const approveUserExtraLeave = createAsyncThunk(
   'userDetail/approveLeave',
-  async ({ userId, leaveId }: { userId: string; leaveId: string }, { rejectWithValue }) => {
+  async (
+    { userId, leaveId }: { userId: string; leaveId: string },
+    { dispatch, rejectWithValue },
+  ) => {
     const res = await approveExtraLeave(userId, leaveId);
     if (!res.ok) return rejectWithValue(res.error);
+    await dispatch(fetchUserDetail(userId));
     return 'Extra leave approved';
   },
 );
 
 type UserDetailState = AsyncSliceState & {
   userId: string;
+  actionLoading: string | null;
+  refreshing: boolean;
   user: AdminUser | null;
   sessions: Array<Record<string, unknown>>;
-  transactions: Array<Record<string, unknown>>;
+  walletTransactions: WalletTransactionRow[];
   ocrSubmissions: Array<Record<string, unknown>>;
   adminNotes: Array<{ id: string; text: string; createdAt: string }>;
+  partnerRequestsSent: PartnerRequestRow[];
+  partnerRequestsReceived: PartnerRequestRow[];
+  sessionShareCodes: SessionShareCodeRow[];
+  leaveSummary: UserLeaveSummary | null;
+  leaves: UserLeaveRecord[];
   overrides: FeatureOverrides | null;
   form: {
     note: string;
     avatar: string;
     walletAmount: string;
     walletReason: string;
+    walletCreditAmount: string;
+    walletCreditNote: string;
+    badgeType: string;
+    badgeNote: string;
     leaveId: string;
   };
 };
@@ -125,17 +211,28 @@ type UserDetailState = AsyncSliceState & {
 const initialState: UserDetailState = {
   ...asyncInitial,
   userId: '',
+  actionLoading: null,
+  refreshing: false,
   user: null,
   sessions: [],
-  transactions: [],
+  walletTransactions: [],
   ocrSubmissions: [],
   adminNotes: [],
+  partnerRequestsSent: [],
+  partnerRequestsReceived: [],
+  sessionShareCodes: [],
+  leaveSummary: null,
+  leaves: [],
   overrides: null,
   form: {
     note: '',
     avatar: '',
     walletAmount: '0',
     walletReason: '',
+    walletCreditAmount: '',
+    walletCreditNote: '',
+    badgeType: 'manual_correction',
+    badgeNote: '',
     leaveId: '',
   },
 };
@@ -162,33 +259,53 @@ const userDetailSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    const setPending = (state: UserDetailState) => {
-      state.status = 'loading';
-      state.error = '';
-    };
     const setMessage = (state: UserDetailState, msg: string) => {
       state.status = 'succeeded';
       state.message = msg;
     };
 
     builder
-      .addCase(fetchUserDetail.pending, setPending)
+      .addCase(fetchUserDetail.pending, (state) => {
+        state.error = '';
+        if (state.user) {
+          state.refreshing = true;
+        } else {
+          state.status = 'loading';
+        }
+      })
       .addCase(fetchUserDetail.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.refreshing = false;
         state.user = action.payload.user;
         state.sessions = action.payload.sessions;
-        state.transactions = action.payload.transactions;
+        state.walletTransactions = action.payload.walletTransactions;
         state.ocrSubmissions = action.payload.ocrSubmissions;
         state.adminNotes = action.payload.adminNotes;
+        state.partnerRequestsSent = action.payload.partnerRequestsSent;
+        state.partnerRequestsReceived = action.payload.partnerRequestsReceived;
+        state.sessionShareCodes = action.payload.sessionShareCodes;
+        state.leaveSummary = action.payload.leaveSummary;
+        state.leaves = action.payload.leaves;
         state.overrides = action.payload.overrides;
         state.form.avatar = action.payload.avatar;
       })
       .addCase(fetchUserDetail.rejected, (state, action) => {
         state.status = 'failed';
+        state.refreshing = false;
         state.error = String(action.payload ?? 'Failed to load user');
       })
-      .addCase(toggleUserDisabled.fulfilled, (state, action) => setMessage(state, action.payload))
+      .addCase(toggleUserDisabled.pending, (state) => {
+        state.actionLoading = 'toggleDisabled';
+        state.error = '';
+      })
+      .addCase(toggleUserDisabled.fulfilled, (state) => {
+        state.actionLoading = null;
+        state.status = 'succeeded';
+        state.message = '';
+      })
       .addCase(toggleUserDisabled.rejected, (state, action) => {
+        state.actionLoading = null;
+        state.status = 'succeeded';
         state.error = String(action.payload);
       })
       .addCase(updateUserAvatar.fulfilled, (state, action) => setMessage(state, action.payload))
@@ -208,6 +325,21 @@ const userDetailSlice = createSlice({
         state.form.walletReason = '';
       })
       .addCase(adjustUserWallet.rejected, (state, action) => {
+        state.error = String(action.payload);
+      })
+      .addCase(creditUserWallet.fulfilled, (state, action) => {
+        setMessage(state, action.payload);
+        state.form.walletCreditAmount = '';
+        state.form.walletCreditNote = '';
+      })
+      .addCase(creditUserWallet.rejected, (state, action) => {
+        state.error = String(action.payload);
+      })
+      .addCase(submitUserBadgeCorrection.fulfilled, (state, action) => {
+        setMessage(state, action.payload);
+        state.form.badgeNote = '';
+      })
+      .addCase(submitUserBadgeCorrection.rejected, (state, action) => {
         state.error = String(action.payload);
       })
       .addCase(saveUserFeatureOverrides.fulfilled, (state, action) => setMessage(state, action.payload))

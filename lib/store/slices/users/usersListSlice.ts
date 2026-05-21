@@ -4,19 +4,38 @@ import type { AdminUser } from '@/lib/types/admin';
 import { asyncInitial, type AsyncSliceState } from '@/lib/store/types';
 
 export type UsersListFilters = {
-  phone: string;
+  search: string;
+  gender: string;
+  tier: string;
+  signupSource: string;
   status: string;
   walletFilter: string;
   sort: string;
   order: string;
 };
 
+export const defaultUsersListFilters: UsersListFilters = {
+  search: '',
+  gender: 'all',
+  tier: 'all',
+  signupSource: 'all',
+  status: 'all',
+  walletFilter: 'all',
+  sort: 'streak',
+  order: 'desc',
+};
+
 export const fetchUsersList = createAsyncThunk(
   'usersList/fetch',
   async (filters: UsersListFilters, { rejectWithValue }) => {
     const params = new URLSearchParams();
-    if (filters.phone.trim()) params.set('phone', filters.phone.trim());
-    params.set('status', filters.status);
+    const search = filters.search.trim();
+    const phoneDigits = search.replace(/\D/g, '');
+    if (phoneDigits.length >= 4) params.set('phone', phoneDigits);
+    if (filters.gender !== 'all') params.set('gender', filters.gender);
+    if (filters.tier !== 'all') params.set('tier', filters.tier);
+    if (filters.signupSource !== 'all') params.set('signupSource', filters.signupSource);
+    if (filters.status !== 'all') params.set('status', filters.status);
     params.set('walletFilter', filters.walletFilter);
     params.set('sort', filters.sort);
     params.set('order', filters.order);
@@ -34,13 +53,7 @@ type UsersListState = AsyncSliceState & {
 const initialState: UsersListState = {
   ...asyncInitial,
   users: [],
-  filters: {
-    phone: '',
-    status: 'all',
-    walletFilter: 'all',
-    sort: 'streak',
-    order: 'desc',
-  },
+  filters: { ...defaultUsersListFilters },
 };
 
 const usersListSlice = createSlice({
@@ -49,6 +62,9 @@ const usersListSlice = createSlice({
   reducers: {
     setUsersFilter(state, action: PayloadAction<Partial<UsersListFilters>>) {
       state.filters = { ...state.filters, ...action.payload };
+    },
+    resetUsersFilters(state) {
+      state.filters = { ...defaultUsersListFilters };
     },
     clearUsersListError(state) {
       state.error = '';
@@ -71,7 +87,7 @@ const usersListSlice = createSlice({
   },
 });
 
-export const { setUsersFilter, clearUsersListError } = usersListSlice.actions;
+export const { setUsersFilter, resetUsersFilters, clearUsersListError } = usersListSlice.actions;
 export default usersListSlice.reducer;
 
 export const selectUsersList = (state: { usersList: UsersListState }) => state.usersList;

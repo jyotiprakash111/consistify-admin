@@ -18,6 +18,8 @@ export type DashboardMetrics = {
 
 export type AdminUser = {
   id: string;
+  name?: string;
+  userName?: string;
   phone: string;
   email: string;
   gender?: string;
@@ -44,6 +46,30 @@ export type AdminUser = {
   badgeRewardsEnabled?: boolean;
   emailNotificationsEnabled?: boolean;
   pushNotificationsEnabled?: boolean;
+  leavesAllowed?: number;
+  totalLeavesAllowed?: number;
+  leavesUsed?: number;
+  leavesRemaining?: number;
+};
+
+export type UserLeaveRecord = {
+  id: string;
+  status: string;
+  type?: string;
+  reason?: string;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
+  createdAt?: string;
+  isExtra?: boolean;
+};
+
+export type UserLeaveSummary = {
+  totalAllowed: number;
+  used: number;
+  remaining: number;
+  extraApproved?: number;
+  pending?: number;
 };
 
 export type SystemConfig = {
@@ -79,6 +105,18 @@ export type SystemConfig = {
     upiEnabled: boolean;
     cardsEnabled: boolean;
   };
+};
+
+export type PendingExtraLeave = {
+  id: string;
+  userId: string;
+  userName: string;
+  phone: string;
+  examGroup: string;
+  leaveDate: string;
+  monthKey: string;
+  reason: string;
+  createdAt: string;
 };
 
 export type FineCollectionUser = {

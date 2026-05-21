@@ -1,8 +1,8 @@
 'use client';
 
+import { AdminShell } from '@/components/layout/admin-shell';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { AdminShell } from '@/components/layout/admin-shell';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { DataTable } from '@/components/ui/data-table';
 import { PageHeader } from '@/components/ui/page-header';

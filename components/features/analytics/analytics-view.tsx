@@ -1,8 +1,8 @@
 'use client';
 
+import { AdminShell } from '@/components/layout/admin-shell';
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
-import { AdminShell } from '@/components/layout/admin-shell';
 import { CategoryChart } from '@/components/features/analytics/charts/category-chart';
 import { DropoffChart } from '@/components/features/analytics/charts/dropoff-chart';
 import { EisenhowerChart } from '@/components/features/analytics/charts/eisenhower-chart';

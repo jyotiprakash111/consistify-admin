@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { AdminShell } from '@/components/layout/admin-shell';
+import { useEffect } from 'react';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { MetricCard } from '@/components/ui/metric-card';
 import { PageHeader } from '@/components/ui/page-header';

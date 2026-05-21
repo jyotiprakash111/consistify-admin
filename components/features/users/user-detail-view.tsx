@@ -1,9 +1,9 @@
 'use client';
 
+import { AdminShell } from '@/components/layout/admin-shell';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
-import { AdminShell } from '@/components/layout/admin-shell';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { CardSection } from '@/components/ui/card-section';
 import { CheckboxField, FormField, TextAreaInput, TextInput } from '@/components/ui/form-field';
@@ -33,7 +33,7 @@ export function UserDetailView() {
   const {
     user,
     sessions,
-    transactions,
+    walletTransactions,
     ocrSubmissions,
     adminNotes,
     overrides,
@@ -217,7 +217,7 @@ export function UserDetailView() {
 
           <JsonPanel title="Admin notes" data={adminNotes} />
           <JsonPanel title="Sessions" data={sessions} />
-          <JsonPanel title="Transactions" data={transactions} />
+          <JsonPanel title="Transactions" data={walletTransactions} />
           <JsonPanel title="OCR submissions" data={ocrSubmissions} />
         </div>
       ) : null}

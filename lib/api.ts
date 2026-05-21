@@ -1,4 +1,10 @@
+import { emitNetworkError, emitNetworkOk, isBrowserOffline } from '@/lib/network-events';
 import type { AnalyticsPayload, SubjectsAnalyticsPayload } from '@/lib/types/analytics';
+import type {
+  PartnerRequestRow,
+  SessionInvitesSummary,
+  SessionShareCodeRow,
+} from '@/lib/types/session-invites';
 import type {
   AdminLog,
   AdminUser,
@@ -6,7 +12,10 @@ import type {
   FeatureOverrides,
   FineCollectionUser,
   SystemConfig,
+  PendingExtraLeave,
+  UserLeaveSummary,
 } from '@/lib/types/admin';
+import type { ExamSubjectTemplate, SubjectQuadrant } from '@/lib/types/exam-subjects';
 
 export type ApiResult<T> =
   | { ok: true; data: T }
@@ -16,6 +25,11 @@ async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<ApiResult<T>> {
+  if (isBrowserOffline()) {
+    emitNetworkError();
+    return { ok: false, error: 'No network connection', status: 0 };
+  }
+
   try {
     const response = await fetch(`/api/admin${path}`, {
       credentials: 'include',
@@ -42,8 +56,10 @@ async function request<T>(
       return { ok: false, error: err, status: response.status };
     }
 
+    emitNetworkOk();
     return { ok: true, data: body as T };
   } catch (error) {
+    emitNetworkError();
     return {
       ok: false,
       error: error instanceof Error ? error.message : 'Network error',
@@ -81,8 +97,22 @@ export function getUserDetail(userId: string) {
     sessions: Array<Record<string, unknown>>;
     transactions: Array<Record<string, unknown>>;
     ocrSubmissions: Array<Record<string, unknown>>;
+    partnerRequestsSent?: PartnerRequestRow[];
+    partnerRequestsReceived?: PartnerRequestRow[];
+    sessionShareCodes?: SessionShareCodeRow[];
     adminNotes: Array<{ id: string; text: string; createdAt: string }>;
+    leaves?: Array<Record<string, unknown>>;
+    leaveSummary?: UserLeaveSummary;
   }>(`/users/${encodeURIComponent(userId)}`);
+}
+
+export function getUserLeaves(userId: string) {
+  return request<{
+    success: boolean;
+    summary?: UserLeaveSummary;
+    leaves?: Array<Record<string, unknown>>;
+    leaveHistory?: Array<Record<string, unknown>>;
+  }>(`/users/${encodeURIComponent(userId)}/leaves`);
 }
 
 export function patchUser(
@@ -126,6 +156,67 @@ export function approveExtraLeave(userId: string, leaveId: string) {
   );
 }
 
+export function getExtraPendingLeaves(limit = 100) {
+  return request<{
+    success: boolean;
+    total: number;
+    leaves: PendingExtraLeave[];
+  }>(`/leaves/extra-pending?limit=${encodeURIComponent(String(limit))}`);
+}
+
+/** One-click approve from global queue (leave id only). */
+export function approveExtraLeaveById(leaveId: string) {
+  return request<{
+    success: boolean;
+    leave?: { id: string; userId: string; kind: string };
+  }>(`/leaves/${encodeURIComponent(leaveId)}/approve-extra`, { method: 'POST' });
+}
+
+export function getAdminExamGroups() {
+  return request<{ success: boolean; groups: string[] }>('/exam-groups');
+}
+
+export function getExamSubjectTemplates(examGroup?: string) {
+  const query = examGroup ? `?examGroup=${encodeURIComponent(examGroup)}` : '';
+  return request<{ success: boolean; templates: ExamSubjectTemplate[] }>(
+    `/exam-subject-templates${query}`,
+  );
+}
+
+export function createExamSubjectTemplate(payload: {
+  examGroup: string;
+  name: string;
+  quadrant: SubjectQuadrant;
+  sortOrder?: number;
+}) {
+  return request<{ success: boolean; template: ExamSubjectTemplate }>(
+    '/exam-subject-templates',
+    { method: 'POST', body: JSON.stringify(payload) },
+  );
+}
+
+export function updateExamSubjectTemplate(
+  id: string,
+  payload: Partial<{
+    examGroup: string;
+    name: string;
+    quadrant: SubjectQuadrant;
+    sortOrder: number;
+  }>,
+) {
+  return request<{ success: boolean; template: ExamSubjectTemplate }>(
+    `/exam-subject-templates/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+export function deleteExamSubjectTemplate(id: string) {
+  return request<{ success: boolean }>(
+    `/exam-subject-templates/${encodeURIComponent(id)}`,
+    { method: 'DELETE' },
+  );
+}
+
 // Fine collection
 export function getFineCollectionSummary() {
   return request<{
@@ -155,10 +246,15 @@ export function getWalletOverview() {
   }>('/wallet/overview');
 }
 
-export function getWalletTransactions(params?: { limit?: number; cursor?: string }) {
+export function getWalletTransactions(params?: {
+  limit?: number;
+  cursor?: string;
+  userId?: string;
+}) {
   const search = new URLSearchParams();
   if (params?.limit) search.set('limit', String(params.limit));
   if (params?.cursor) search.set('cursor', params.cursor);
+  if (params?.userId) search.set('userId', params.userId);
   const query = search.toString();
   return request<{
     success: boolean;
@@ -208,6 +304,46 @@ export function getAnalyticsSubjects() {
   return request<SubjectsAnalyticsPayload>('/analytics/subjects');
 }
 
+// Session invites (partner requests + share codes for WhatsApp / Telegram / link)
+export function getSessionInvitesSummary() {
+  return request<{
+    success: boolean;
+    summary: SessionInvitesSummary;
+    recentPartnerRequests: PartnerRequestRow[];
+    recentShareCodes: SessionShareCodeRow[];
+  }>('/session-invites/summary');
+}
+
+export function getSessionPartnerRequests(params?: {
+  status?: string;
+  userId?: string;
+  limit?: number;
+}) {
+  const search = new URLSearchParams();
+  if (params?.status) search.set('status', params.status);
+  if (params?.userId) search.set('userId', params.userId);
+  if (params?.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return request<{ success: boolean; requests: PartnerRequestRow[] }>(
+    `/session-invites/partner-requests${query ? `?${query}` : ''}`,
+  );
+}
+
+export function getSessionShareCodes(params?: {
+  userId?: string;
+  activeOnly?: boolean;
+  limit?: number;
+}) {
+  const search = new URLSearchParams();
+  if (params?.userId) search.set('userId', params.userId);
+  if (params?.activeOnly) search.set('activeOnly', 'true');
+  if (params?.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return request<{ success: boolean; shareCodes: SessionShareCodeRow[] }>(
+    `/session-invites/share-codes${query ? `?${query}` : ''}`,
+  );
+}
+
 // Badges
 export function getBadgeSummary() {
   return request<{
@@ -215,7 +351,17 @@ export function getBadgeSummary() {
     totalBadges: number;
     distribution: Array<{ type: string; count: number }>;
     recentEvents: Array<Record<string, unknown>>;
+    topWinners?: Array<Record<string, unknown>>;
   }>('/badges/summary');
+}
+
+export function getUserBadges(userId: string) {
+  return request<{
+    success: boolean;
+    badges?: Array<Record<string, unknown>>;
+    events?: Array<Record<string, unknown>>;
+    total?: number;
+  }>(`/users/${encodeURIComponent(userId)}/badges`);
 }
 
 export function postBadgeCorrection(payload: { userId: string; type: string; note: string }) {

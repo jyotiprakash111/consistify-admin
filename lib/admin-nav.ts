@@ -12,6 +12,13 @@ export const adminNavItems: AdminNavItem[] = [
   { href: '/fine-collection', label: 'Fine collection', api: 'GET /fine-collection/*' },
   { href: '/wallet', label: 'Wallet', api: 'GET /wallet/*' },
   { href: '/ocr', label: 'OCR', api: 'GET /ocr/submissions' },
+  { href: '/session-invites', label: 'Session invites', api: 'GET /session-invites/*' },
+  {
+    href: '/extra-leaves',
+    label: 'Extra leaves',
+    api: 'GET /leaves/extra-pending · POST /leaves/:leaveId/approve-extra',
+  },
+  { href: '/exam-subjects', label: 'Exam subjects', api: 'GET /exam-subject-templates' },
   { href: '/badges', label: 'Badges', api: 'GET /badges/summary' },
   { href: '/analytics', label: 'Analytics', api: 'GET /analytics' },
   { href: '/settings', label: 'System config', api: 'GET /systemconfig' },

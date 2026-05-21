@@ -1,8 +1,16 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { FlashProvider } from '@/components/providers/flash-provider';
+import { NetworkProvider } from '@/components/providers/network-provider';
 import { StoreProvider } from '@/components/providers/store-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Persistify Admin',
@@ -19,9 +27,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className="min-h-screen">
+      <body className={`${inter.className} min-h-screen`}>
         <ThemeProvider>
-          <StoreProvider>{children}</StoreProvider>
+          <NetworkProvider>
+            <StoreProvider>
+              <FlashProvider>{children}</FlashProvider>
+            </StoreProvider>
+          </NetworkProvider>
         </ThemeProvider>
       </body>
     </html>

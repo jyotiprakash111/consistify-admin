@@ -24,17 +24,19 @@ export function AdminShell({ children }: PropsWithChildren) {
   return (
     <div className="flex min-h-screen">
       <aside className={shellAside}>
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-md dark:bg-indigo-500">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-600/30">
             <Shield className="size-5" strokeWidth={2} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Persistify</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Admin console</p>
+            <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+              Persistify
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-500">Admin console</p>
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto scroll-smooth pr-1">
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto scroll-smooth pr-1">
           {adminNavItems.map((link) => {
             const active = isNavActive(pathname ?? '', link.href);
             const Icon = navIconMap[link.href];
@@ -52,7 +54,7 @@ export function AdminShell({ children }: PropsWithChildren) {
           })}
         </nav>
 
-        <div className="mt-4 space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-700">
+        <div className="mt-6 space-y-3 border-t border-slate-200/60 pt-5 dark:border-zinc-800">
           <ThemeToggle />
           <button type="button" onClick={onLogout} className={`${btn} w-full`}>
             <LogoutIcon className="size-4" strokeWidth={2} />
@@ -60,7 +62,9 @@ export function AdminShell({ children }: PropsWithChildren) {
           </button>
         </div>
       </aside>
-      <main className={shellMain}>{children}</main>
+      <main className={shellMain}>
+        <div className="mx-auto max-w-7xl">{children}</div>
+      </main>
     </div>
   );
 }

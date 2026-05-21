@@ -36,7 +36,6 @@ function applyTheme(resolved: 'light' | 'dark') {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
-  const [mounted, setMounted] = useState(false);
 
   const resolve = useCallback((value: Theme) => {
     return value === 'system' ? getSystemTheme() : value;
@@ -56,7 +55,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const resolved = resolve(stored);
     setResolvedTheme(resolved);
     applyTheme(resolved);
-    setMounted(true);
 
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => {
@@ -77,11 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <div
-        className={`min-h-screen transition-opacity duration-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {children}
-      </div>
+      <div className="min-h-screen">{children}</div>
     </ThemeContext.Provider>
   );
 }
