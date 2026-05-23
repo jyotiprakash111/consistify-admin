@@ -202,8 +202,8 @@ export function UserDetailView() {
           <UserOcrTable submissions={ocrSubmissions} />
 
           <p className="text-center text-xs text-slate-500 dark:text-zinc-500">
-            <Link href={`/extra-leaves`} className={linkAccent}>
-              Extra leaves queue
+            <Link href="/leaves" className={linkAccent}>
+              Leaves queue
             </Link>
             {' · '}
             <Link href={`/wallet?userId=${encodeURIComponent(userId)}`} className={linkAccent}>

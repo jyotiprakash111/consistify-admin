@@ -2,27 +2,48 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useState } from 'react';
+import { Loader2, Shield } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { adminNavItems, isNavActive } from '@/lib/admin-nav';
 import { LogoutIcon, navIconMap } from '@/lib/nav-icons';
-import { useAppDispatch } from '@/lib/store/hooks';
-import { logoutAdmin } from '@/lib/store/slices/auth/authSlice';
+import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
+import {
+  logoutAdmin,
+  selectLogoutLoading,
+} from '@/lib/store/slices/auth/authSlice';
 import { btn, navLinkActive, navLinkInactive, shellAside, shellMain } from '@/lib/ui-classes';
-import { Shield } from 'lucide-react';
+
+const LOGOUT_FADE_MS = 280;
 
 export function AdminShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const loggingOut = useAppSelector(selectLogoutLoading);
+  const [leaving, setLeaving] = useState(false);
 
   async function onLogout() {
-    await dispatch(logoutAdmin());
-    router.push('/login');
+    if (loggingOut || leaving) return;
+
+    setLeaving(true);
+    const result = await dispatch(logoutAdmin());
+
+    if (logoutAdmin.fulfilled.match(result)) {
+      await new Promise((resolve) => setTimeout(resolve, LOGOUT_FADE_MS));
+      router.replace('/login');
+      return;
+    }
+
+    setLeaving(false);
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div
+      className={`flex min-h-screen transition-opacity duration-300 ease-out ${
+        leaving ? 'pointer-events-none opacity-0' : 'opacity-100'
+      }`}
+    >
       <aside className={shellAside}>
         <div className="mb-8 flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-600/30">
@@ -56,9 +77,19 @@ export function AdminShell({ children }: PropsWithChildren) {
 
         <div className="mt-6 space-y-3 border-t border-slate-200/60 pt-5 dark:border-zinc-800">
           <ThemeToggle />
-          <button type="button" onClick={onLogout} className={`${btn} w-full`}>
-            <LogoutIcon className="size-4" strokeWidth={2} />
-            Logout
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+            disabled={loggingOut || leaving}
+            aria-busy={loggingOut || leaving}
+            className={`${btn} w-full`}
+          >
+            {loggingOut || leaving ? (
+              <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden />
+            ) : (
+              <LogoutIcon className="size-4" strokeWidth={2} aria-hidden />
+            )}
+            {loggingOut ? 'Logging out…' : leaving ? 'Redirecting…' : 'Logout'}
           </button>
         </div>
       </aside>

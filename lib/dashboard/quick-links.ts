@@ -14,7 +14,7 @@ const linkDefs: Array<{
   description: string;
 }> = [
   { href: '/users', label: 'Users', description: 'Search, profile & leaves' },
-  { href: '/extra-leaves', label: 'Extra leaves', description: 'Pending approvals' },
+  { href: '/leaves', label: 'Leaves', description: 'Approve & review leave records' },
   { href: '/wallet', label: 'Wallet', description: 'Credits & transactions' },
   { href: '/fine-collection', label: 'Fine collection', description: 'Balances & fines' },
   { href: '/ocr', label: 'OCR', description: 'Submissions & corrections' },

@@ -11,9 +11,9 @@ export function buildDashboardAlerts(metrics: DashboardMetrics): DashboardAlert[
     alerts.push({
       id: 'extra-leaves',
       severity: 'warning',
-      title: 'Extra leave approvals',
+      title: 'Leave approvals',
       message: `${metrics.pendingExtraLeaves} request${metrics.pendingExtraLeaves === 1 ? '' : 's'} waiting for review.`,
-      href: '/extra-leaves',
+      href: '/leaves',
       ctaLabel: 'Review queue',
     });
   }

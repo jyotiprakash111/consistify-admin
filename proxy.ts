@@ -10,6 +10,10 @@ const protectedPrefixes = [
   '/analytics',
   '/settings',
   '/logs',
+  '/leaves',
+  '/extra-leaves',
+  '/session-invites',
+  '/exam-subjects',
 ];
 
 export function proxy(request: NextRequest) {
@@ -48,5 +52,9 @@ export const config = {
     '/analytics/:path*',
     '/settings/:path*',
     '/logs/:path*',
+    '/leaves/:path*',
+    '/extra-leaves/:path*',
+    '/session-invites/:path*',
+    '/exam-subjects/:path*',
   ],
 };

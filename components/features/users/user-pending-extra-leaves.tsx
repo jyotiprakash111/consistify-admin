@@ -26,8 +26,8 @@ export function UserPendingExtraLeaves({
       <section className={card}>
         <p className={`${mutedText} text-sm`}>
           No pending extra leaves for this user.{' '}
-          <Link href="/extra-leaves" className={linkAccent}>
-            View global queue →
+          <Link href="/leaves" className={linkAccent}>
+            View leaves queue →
           </Link>
         </p>
       </section>

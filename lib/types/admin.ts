@@ -96,7 +96,9 @@ export type SystemConfig = {
   };
 };
 
-export type PendingExtraLeave = {
+export type LeaveKind = 'standard' | 'extra_pending' | 'extra_approved';
+
+export type AdminLeaveRow = {
   id: string;
   userId: string;
   userName: string;
@@ -104,9 +106,13 @@ export type PendingExtraLeave = {
   examGroup: string;
   leaveDate: string;
   monthKey: string;
+  kind: LeaveKind;
   reason: string;
   createdAt: string;
 };
+
+/** @deprecated Use AdminLeaveRow */
+export type PendingExtraLeave = AdminLeaveRow;
 
 export type FineCollectionUser = {
   userId: string;

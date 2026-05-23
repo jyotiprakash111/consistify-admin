@@ -1,5 +1,5 @@
-import { ExtraLeavesQueueView } from '@/components/features/extra-leaves/extra-leaves-queue-view';
+import { redirect } from 'next/navigation';
 
-export default function ExtraLeavesPage() {
-  return <ExtraLeavesQueueView />;
+export default function ExtraLeavesRedirectPage() {
+  redirect('/leaves');
 }

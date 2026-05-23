@@ -16,9 +16,9 @@ export type QueueItemDefinition = {
 export const DASHBOARD_QUEUE_ITEMS: QueueItemDefinition[] = [
   {
     metricKey: 'pendingExtraLeaves',
-    label: 'Extra leaves',
+    label: 'Leaves',
     description: 'Awaiting admin approval',
-    href: '/extra-leaves',
+    href: '/leaves',
     icon: CalendarClock,
     accent: 'amber',
     ctaLabel: 'Open queue',

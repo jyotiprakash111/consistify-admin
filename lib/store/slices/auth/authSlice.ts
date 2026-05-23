@@ -21,6 +21,7 @@ type AuthState = AsyncSliceState & {
   email: string;
   password: string;
   isAuthenticated: boolean;
+  logoutStatus: 'idle' | 'loading';
 };
 
 const initialState: AuthState = {
@@ -28,6 +29,7 @@ const initialState: AuthState = {
   email: '',
   password: '',
   isAuthenticated: false,
+  logoutStatus: 'idle',
 };
 
 const authSlice = createSlice({
@@ -60,16 +62,17 @@ const authSlice = createSlice({
         state.error = String(action.payload ?? 'Login failed');
       })
       .addCase(logoutAdmin.pending, (state) => {
-        state.status = 'loading';
+        state.logoutStatus = 'loading';
+        state.error = '';
       })
       .addCase(logoutAdmin.fulfilled, (state) => {
-        state.status = 'idle';
+        state.logoutStatus = 'idle';
         state.isAuthenticated = false;
         state.email = '';
         state.password = '';
       })
       .addCase(logoutAdmin.rejected, (state, action) => {
-        state.status = 'failed';
+        state.logoutStatus = 'idle';
         state.error = String(action.payload ?? 'Logout failed');
       });
   },
@@ -80,3 +83,5 @@ export default authSlice.reducer;
 
 export const selectAuth = (state: { auth: AuthState }) => state.auth;
 export const selectAuthLoading = (state: { auth: AuthState }) => state.auth.status === 'loading';
+export const selectLogoutLoading = (state: { auth: AuthState }) =>
+  state.auth.logoutStatus === 'loading';

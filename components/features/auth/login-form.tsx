@@ -1,8 +1,8 @@
 'use client';
 
-import { FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { LogIn, Mail, Shield } from 'lucide-react';
+import { FormEvent, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, LogIn, Mail, Shield } from 'lucide-react';
 import { AlertMessage } from '@/components/ui/alert-message';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { FormField, TextInput } from '@/components/ui/form-field';
@@ -18,15 +18,24 @@ import { btnPrimary, loginCard, mutedText, pageTitle } from '@/lib/ui-classes';
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { email, password, error } = useAppSelector(selectAuth);
   const loading = useAppSelector(selectAuthLoading);
+
+  const sessionExpiredMessage = useMemo(() => {
+    if (searchParams?.get('expired') !== '1') return '';
+    return 'Your session has expired. Please sign in again.';
+  }, [searchParams]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = await dispatch(loginAdmin({ email, password }));
     if (loginAdmin.fulfilled.match(result)) {
-      router.push('/dashboard');
+      const from = searchParams?.get('from');
+      const safeReturn =
+        from?.startsWith('/') && !from.startsWith('/login') ? from : '/dashboard';
+      router.push(safeReturn);
     }
   }
 
@@ -64,11 +73,20 @@ export function LoginForm() {
               placeholder="••••••••"
             />
           </FormField>
-          <button type="submit" disabled={loading} className={`${btnPrimary} w-full`}>
-            <LogIn className="size-4" strokeWidth={2} />
-            {loading ? 'Signing in...' : 'Sign in'}
+          <button
+            type="submit"
+            disabled={loading}
+            aria-busy={loading}
+            className={`${btnPrimary} w-full`}
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden />
+            ) : (
+              <LogIn className="size-4" strokeWidth={2} aria-hidden />
+            )}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
-          <AlertMessage error={error} />
+          <AlertMessage error={sessionExpiredMessage || error} />
         </form>
       </div>
     </main>

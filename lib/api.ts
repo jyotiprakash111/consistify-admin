@@ -1,3 +1,4 @@
+import { handleSessionExpired, isAuthApiPath } from '@/lib/auth-session';
 import { emitNetworkError, emitNetworkOk, isBrowserOffline } from '@/lib/network-events';
 import type { AnalyticsPayload, SubjectsAnalyticsPayload } from '@/lib/types/analytics';
 import type {
@@ -12,7 +13,8 @@ import type {
   FeatureOverrides,
   FineCollectionUser,
   SystemConfig,
-  PendingExtraLeave,
+  AdminLeaveRow,
+  LeaveKind,
   UserLeaveSummary,
 } from '@/lib/types/admin';
 import type { ExamSubjectTemplate, SubjectQuadrant } from '@/lib/types/exam-subjects';
@@ -53,6 +55,11 @@ async function request<T>(
         (body as { error?: string; message?: string } | undefined)?.error ??
         (body as { error?: string; message?: string } | undefined)?.message ??
         `${response.status} ${response.statusText}`;
+
+      if (response.status === 401 && !isAuthApiPath(path)) {
+        void handleSessionExpired();
+      }
+
       return { ok: false, error: err, status: response.status };
     }
 
@@ -156,12 +163,22 @@ export function approveExtraLeave(userId: string, leaveId: string) {
   );
 }
 
-export function getExtraPendingLeaves(limit = 100) {
+export function getAdminLeaves(params?: { kind?: LeaveKind | 'all'; limit?: number }) {
+  const search = new URLSearchParams();
+  if (params?.kind && params.kind !== 'all') search.set('kind', params.kind);
+  if (params?.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
   return request<{
     success: boolean;
     total: number;
-    leaves: PendingExtraLeave[];
-  }>(`/leaves/extra-pending?limit=${encodeURIComponent(String(limit))}`);
+    pendingTotal: number;
+    leaves: AdminLeaveRow[];
+  }>(`/leaves${query ? `?${query}` : ''}`);
+}
+
+/** @deprecated Prefer getAdminLeaves({ kind: 'extra_pending' }) */
+export function getExtraPendingLeaves(limit = 100) {
+  return getAdminLeaves({ kind: 'extra_pending', limit });
 }
 
 /** One-click approve from global queue (leave id only). */

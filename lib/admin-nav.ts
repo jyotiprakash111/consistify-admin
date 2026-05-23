@@ -14,9 +14,9 @@ export const adminNavItems: AdminNavItem[] = [
   { href: '/ocr', label: 'OCR', api: 'GET /ocr/submissions' },
   { href: '/session-invites', label: 'Session invites', api: 'GET /session-invites/*' },
   {
-    href: '/extra-leaves',
-    label: 'Extra leaves',
-    api: 'GET /leaves/extra-pending · POST /leaves/:leaveId/approve-extra',
+    href: '/leaves',
+    label: 'Leaves',
+    api: 'GET /leaves · POST /leaves/:leaveId/approve-extra',
   },
   { href: '/exam-subjects', label: 'Exam subjects', api: 'GET /exam-subject-templates' },
   { href: '/badges', label: 'Badges', api: 'GET /badges/summary' },
