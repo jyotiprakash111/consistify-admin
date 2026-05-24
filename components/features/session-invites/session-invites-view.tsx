@@ -350,14 +350,12 @@ export function SessionInvitesView() {
       header: '',
       render: (r: (typeof paginatedRows)[0]) =>
         r.joinUrl ? (
-          <a
-            href={r.joinUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={`${linkAccent} text-xs font-medium`}
+          <span
+            className="cursor-default text-xs font-medium text-slate-400 dark:text-zinc-500"
+            title={r.joinUrl}
           >
             Open join link
-          </a>
+          </span>
         ) : r.note?.trim() ? (
           <span className="max-w-[10rem] truncate text-xs text-slate-500" title={r.note}>
             {r.note}
